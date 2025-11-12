@@ -1,0 +1,31 @@
+{
+  "name": "Next.js 16 Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [3000, 5432, 5050],
+  "portsAttributes": {
+    "5432": {"label": "PostgreSQL"},
+    "5050": {"label": "pgAdmin"},
+    "3000": {"label": "Next.js App", "onAutoForward": "openBrowser"}
+  },
+  "postCreateCommand": "npm install && docker-compose up -d",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
+      }
+    }
+  }
+}
