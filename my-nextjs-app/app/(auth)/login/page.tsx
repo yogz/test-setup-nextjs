@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { authClient } from '@/lib/auth/client';
+import { authClient, useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,18 +23,38 @@ export default function LoginPage() {
         email,
         password,
       });
-      
+
       if (result.error) {
         setError(result.error.message || 'Invalid email or password');
         setLoading(false);
         return;
       }
 
-      // Wait a moment for the session to be set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Force a hard navigation to ensure session is loaded
-      window.location.href = '/dashboard';
+      // Wait for session to be established with exponential backoff
+      let sessionAttempts = 0;
+      const maxAttempts = 10;
+      let waitTime = 100; // Start with 100ms
+
+      while (sessionAttempts < maxAttempts) {
+        // Refetch session
+        const currentSession = await authClient.getSession();
+
+        if (currentSession.data) {
+          // Session is confirmed, navigate to dashboard
+          router.push('/dashboard');
+          return;
+        }
+
+        sessionAttempts++;
+        if (sessionAttempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          waitTime = Math.min(waitTime * 1.5, 500); // Exponential backoff, max 500ms
+        }
+      }
+
+      // If we reach here, session wasn't established - show error
+      setError('Sign in successful but session failed. Please try again.');
+      setLoading(false);
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');
       setLoading(false);
