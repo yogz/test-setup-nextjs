@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { authClient } from '@/lib/auth/client';
+import { authClient, useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,11 +44,32 @@ export default function RegisterPage() {
         return;
       }
 
-      // Wait a moment for the session to be set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Force a hard navigation to ensure session is loaded
-      window.location.href = '/dashboard';
+      // Wait for session to be established with exponential backoff
+      let sessionAttempts = 0;
+      const maxAttempts = 10;
+      const maxWaitTime = 5000; // 5 seconds total
+      let waitTime = 100; // Start with 100ms
+
+      while (sessionAttempts < maxAttempts) {
+        // Refetch session
+        const currentSession = await authClient.getSession();
+
+        if (currentSession.data) {
+          // Session is confirmed, navigate to dashboard
+          router.push('/dashboard');
+          return;
+        }
+
+        sessionAttempts++;
+        if (sessionAttempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          waitTime = Math.min(waitTime * 1.5, 500); // Exponential backoff, max 500ms
+        }
+      }
+
+      // If we reach here, session wasn't established - show error
+      setError('Account created but session failed. Please try signing in.');
+      setLoading(false);
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
       setLoading(false);
