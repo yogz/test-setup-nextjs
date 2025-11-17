@@ -111,7 +111,7 @@ echo -e "${GREEN}✅ Dependencies installed${NC}"
 
 # Fix security vulnerabilities
 echo -e "${BLUE}🔒 Fixing security vulnerabilities...${NC}"
-npm audit fix --quiet 2>/dev/null || echo -e "${YELLOW}⚠️  Some vulnerabilities couldn't be auto-fixed (this is normal)${NC}"
+npm audit fix --quiet 2>/dev/null || echo -e "${YELLOW}⚠️  Some vulnerabilities couldn't be auto-fixed${NC}"
 
 # Setup shadcn/ui with init
 echo -e "${BLUE}🎨 Setting up shadcn/ui...${NC}"
@@ -220,14 +220,22 @@ echo -e "${GREEN}✅ shadcn/ui configured${NC}"
 # Create project structure
 echo -e "${BLUE}📂 Creating project structure...${NC}"
 
-mkdir -p app/\(auth\)/{login,register,forgot-password}
-mkdir -p app/\(dashboard\)/{dashboard,settings,profile}
-mkdir -p app/\(marketing\)/{about,pricing,blog}
-mkdir -p app/api/auth/\[...all\]
+# App directory with route groups (Next.js pattern)
+# Route groups (folders in parentheses) organize routes without affecting URLs
+mkdir -p app/\(auth\)              # For login, register pages (when you create them)
+mkdir -p app/\(dashboard\)         # For protected dashboard pages
+mkdir -p app/\(marketing\)         # For public pages (about, pricing, etc)
+mkdir -p app/api/auth/\[...all\]   # Better Auth API routes
+
+# Component directories (ready for your UI)
 mkdir -p components/{ui,forms,layout}
-mkdir -p components/features/{dashboard,blog}
+mkdir -p components/features       # Feature-specific components
+
+# Lib directories (backend logic)
 mkdir -p lib/{actions,api,auth,validations,constants}
 mkdir -p lib/db/migrations
+
+# Supporting directories
 mkdir -p hooks types config public/images
 
 echo -e "${GREEN}✅ Directory structure created${NC}"
@@ -513,11 +521,12 @@ export const db = drizzle(client, { schema });
 EOF
 
 # Create Better Auth configuration
-echo -e "${BLUE}🔒 Configuring Better Auth...${NC}"
+echo -e "${BLUE}🔒 Configuring Better Auth with security best practices...${NC}"
 
 cat > lib/auth/auth.ts << 'EOF'
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { nextCookies } from 'better-auth/next-js';
 import { db } from '@/lib/db';
 import { users, sessions, accounts, verifications } from '@/lib/db/schema';
 
@@ -538,7 +547,10 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    requireEmailVerification: false, // Set to true in production with email service
+    minPasswordLength: 12, // Stronger password requirement
+    maxPasswordLength: 128,
+    autoSignIn: true,
   },
   socialProviders: {
     // Google OAuth - only enabled if credentials are provided
@@ -564,12 +576,25 @@ export const auth = betterAuth({
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day
+    updateAge: 60 * 60 * 24, // 1 day (refresh session if used after 1 day)
   },
   trustedOrigins: [
     process.env.BETTER_AUTH_URL!,
     'https://appleid.apple.com', // Required for Apple Sign In
   ],
+  advanced: {
+    // Enhanced security settings
+    useSecureCookies: process.env.NODE_ENV === 'production',
+    defaultCookieAttributes: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', // CSRF protection
+      path: '/',
+    },
+    disableCSRFCheck: false, // Keep CSRF protection enabled
+  },
+  // IMPORTANT: nextCookies must be the LAST plugin
+  plugins: [nextCookies()],
 });
 
 export type AuthSession = typeof auth.$Infer.Session.session;
@@ -594,46 +619,33 @@ import { toNextJsHandler } from 'better-auth/next-js';
 export const { GET, POST } = toNextJsHandler(auth);
 EOF
 
-# Create proxy.ts (Next.js 16 replacement for middleware.ts)
+# Create minimal proxy.ts (Next.js 16 - ready for future auth routes)
 echo -e "${BLUE}🛡️  Creating proxy.ts (Next.js 16)...${NC}"
 cat > proxy.ts << 'EOF'
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function proxy(request: NextRequest) {
+/**
+ * Next.js 16 Proxy Handler
+ *
+ * This is a minimal configuration. When you add authentication pages,
+ * uncomment and customize the route protection logic below.
+ */
+export default async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  
-  // Public routes that don't require authentication
-  const publicRoutes = ['/', '/about', '/pricing', '/blog'];
-  const isPublicRoute = publicRoutes.some(route => path === route);
-  
-  // Auth routes (login, register, etc.)
-  const isAuthPage = path.startsWith('/login') || 
-                     path.startsWith('/register') ||
-                     path.startsWith('/forgot-password');
-  
-  // Protected routes
-  const isProtectedRoute = path.startsWith('/dashboard') ||
-                           path.startsWith('/settings') ||
-                           path.startsWith('/profile');
 
-  // Don't do anything for public routes or API routes
-  if (isPublicRoute || path.startsWith('/api')) {
+  // Allow all API routes
+  if (path.startsWith('/api')) {
     return NextResponse.next();
   }
 
-  // Get session cookie using Better Auth helper
-  const { getSessionCookie } = await import('better-auth/cookies');
-  const sessionCookie = getSessionCookie(request);
-
-  // Redirect authenticated users away from auth pages
-  if (isAuthPage && sessionCookie) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Redirect unauthenticated users to login
-  if (isProtectedRoute && !sessionCookie) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  // Add your route protection logic here when needed
+  // Example:
+  // const { getSessionCookie } = await import('better-auth/cookies');
+  // const sessionCookie = getSessionCookie(request);
+  //
+  // if (path.startsWith('/dashboard') && !sessionCookie) {
+  //   return NextResponse.redirect(new URL('/login', request.url));
+  // }
 
   return NextResponse.next();
 }
@@ -652,7 +664,7 @@ export const config = {
 };
 EOF
 
-echo -e "${GREEN}✅ proxy.ts created${NC}"
+echo -e "${GREEN}✅ proxy.ts created (minimal configuration)${NC}"
 
 # Create types
 cat > types/index.ts << 'EOF'
@@ -696,580 +708,20 @@ export const DASHBOARD_ROUTES = {
 } as const;
 EOF
 
-# Create home page
+# Create simple Hello World home page
 cat > app/page.tsx << 'EOF'
-import Link from 'next/link';
-
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="z-10 w-full max-w-5xl">
-        <h1 className="text-4xl font-bold text-center mb-8">
-          Welcome to Your Next.js 16 App
+      <div className="z-10 w-full max-w-5xl text-center">
+        <h1 className="text-6xl font-bold mb-4">
+          Hello World
         </h1>
-        <p className="text-center text-muted-foreground mb-8">
-          Built with Next.js 16, TypeScript, Drizzle, Tailwind, and Better Auth
+        <p className="text-xl text-muted-foreground">
+          Next.js 16 + TypeScript + Better Auth + Drizzle ORM
         </p>
-        <div className="flex gap-4 justify-center">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
-          >
-            Sign In
-          </Link>
-        </div>
       </div>
     </main>
-  );
-}
-EOF
-
-# Create marketing layout
-cat > app/\(marketing\)/layout.tsx << 'EOF'
-export default function MarketingLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold">My App</h1>
-        </div>
-      </header>
-      {children}
-    </div>
-  );
-}
-EOF
-
-cat > app/\(marketing\)/about/page.tsx << 'EOF'
-export default function AboutPage() {
-  return (
-    <div className="container mx-auto px-4 py-16">
-      <h1 className="text-4xl font-bold mb-4">About Us</h1>
-      <p className="text-muted-foreground">
-        This is the about page in the marketing route group.
-      </p>
-    </div>
-  );
-}
-EOF
-
-# Create auth layout
-cat > app/\(auth\)/layout.tsx << 'EOF'
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50">
-      <div className="w-full max-w-md">{children}</div>
-    </div>
-  );
-}
-EOF
-
-# Create login page
-cat > app/\(auth\)/login/page.tsx << 'EOF'
-'use client';
-
-import { useState } from 'react';
-import { authClient } from '@/lib/auth/client';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const result = await authClient.signIn.email({
-        email,
-        password,
-      });
-      
-      if (result.error) {
-        setError(result.error.message || 'Invalid email or password');
-        setLoading(false);
-        return;
-      }
-
-      // Wait a moment for the session to be set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Force a hard navigation to ensure session is loaded
-      window.location.href = '/dashboard';
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
-      setLoading(false);
-    }
-  };
-
-  const handleSocialSignIn = async (provider: 'google' | 'apple') => {
-    try {
-      await authClient.signIn.social({
-        provider,
-        callbackURL: '/dashboard',
-      });
-    } catch (err: any) {
-      setError(err.message || `Failed to sign in with ${provider}`);
-    }
-  };
-
-  return (
-    <div className="bg-background p-8 rounded-lg shadow-lg border">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-center mb-2">Sign In</h1>
-        <p className="text-center text-sm text-muted-foreground">
-          Enter your credentials to access your account
-        </p>
-      </div>
-
-      {/* Social Sign In Buttons */}
-      <div className="space-y-3 mb-6">
-        <button
-          onClick={() => handleSocialSignIn('google')}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-input rounded-md hover:bg-accent transition-colors"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path
-              fill="currentColor"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="currentColor"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="currentColor"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-            />
-            <path
-              fill="currentColor"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            />
-          </svg>
-          <span className="text-sm font-medium">Continue with Google</span>
-        </button>
-
-        <button
-          onClick={() => handleSocialSignIn('apple')}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-input rounded-md hover:bg-accent transition-colors"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-          </svg>
-          <span className="text-sm font-medium">Continue with Apple</span>
-        </button>
-      </div>
-
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border"></div>
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md border border-destructive/20">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="you@example.com"
-            disabled={loading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="••••••••"
-            disabled={loading}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-opacity"
-        >
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
-      </form>
-
-      <div className="mt-6 text-center text-sm">
-        <span className="text-muted-foreground">Don't have an account? </span>
-        <Link href="/register" className="text-primary hover:underline">
-          Sign up
-        </Link>
-      </div>
-    </div>
-  );
-}
-EOF
-
-# Create register page
-cat > app/\(auth\)/register/page.tsx << 'EOF'
-'use client';
-
-import { useState } from 'react';
-import { authClient } from '@/lib/auth/client';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-
-export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const result = await authClient.signUp.email({
-        email,
-        password,
-        name,
-      });
-
-      if (result.error) {
-        setError(result.error.message || 'Failed to create account');
-        setLoading(false);
-        return;
-      }
-
-      // Wait a moment for the session to be set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Force a hard navigation to ensure session is loaded
-      window.location.href = '/dashboard';
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
-      setLoading(false);
-    }
-  };
-
-  const handleSocialSignIn = async (provider: 'google' | 'apple') => {
-    try {
-      await authClient.signIn.social({
-        provider,
-        callbackURL: '/dashboard',
-      });
-    } catch (err: any) {
-      setError(err.message || `Failed to sign up with ${provider}`);
-    }
-  };
-
-  return (
-    <div className="bg-background p-8 rounded-lg shadow-lg border">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-center mb-2">Create Account</h1>
-        <p className="text-center text-sm text-muted-foreground">
-          Sign up to get started
-        </p>
-      </div>
-
-      {/* Social Sign Up Buttons */}
-      <div className="space-y-3 mb-6">
-        <button
-          onClick={() => handleSocialSignIn('google')}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-input rounded-md hover:bg-accent transition-colors"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path
-              fill="currentColor"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="currentColor"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="currentColor"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-            />
-            <path
-              fill="currentColor"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            />
-          </svg>
-          <span className="text-sm font-medium">Continue with Google</span>
-        </button>
-
-        <button
-          onClick={() => handleSocialSignIn('apple')}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-input rounded-md hover:bg-accent transition-colors"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-          </svg>
-          <span className="text-sm font-medium">Continue with Apple</span>
-        </button>
-      </div>
-
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border"></div>
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md border border-destructive/20">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium">Full Name</label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="John Doe"
-            disabled={loading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="you@example.com"
-            disabled={loading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="••••••••"
-            disabled={loading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="confirmPassword" className="text-sm font-medium">
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            minLength={8}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="••••••••"
-            disabled={loading}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-opacity"
-        >
-          {loading ? 'Creating account...' : 'Create Account'}
-        </button>
-      </form>
-
-      <div className="mt-6 text-center text-sm">
-        <span className="text-muted-foreground">Already have an account? </span>
-        <Link href="/login" className="text-primary hover:underline">
-          Sign in
-        </Link>
-      </div>
-    </div>
-  );
-}
-EOF
-
-# Create dashboard layout with async headers (Next.js 16)
-cat > app/\(dashboard\)/layout.tsx << 'EOF'
-import { auth } from '@/lib/auth/auth';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { DashboardNav } from '@/components/layout/dashboard-nav';
-
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const headersList = await headers();
-  
-  const session = await auth.api.getSession({
-    headers: headersList,
-  });
-
-  if (!session) {
-    redirect('/login');
-  }
-
-  return (
-    <div className="min-h-screen flex">
-      <aside className="w-64 border-r bg-muted/10">
-        <DashboardNav user={session.user} />
-      </aside>
-      <main className="flex-1 p-8">{children}</main>
-    </div>
-  );
-}
-EOF
-
-# Create dashboard navigation
-mkdir -p components/layout
-cat > components/layout/dashboard-nav.tsx << 'EOF'
-'use client';
-
-import Link from 'next/link';
-import { authClient } from '@/lib/auth/client';
-import { useRouter } from 'next/navigation';
-
-export function DashboardNav({ user }: { user: any }) {
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    await authClient.signOut();
-    router.push('/');
-    router.refresh();
-  };
-
-  return (
-    <>
-      <div className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Dashboard</h2>
-        <nav className="space-y-2">
-          <Link href="/dashboard" className="block px-3 py-2 rounded hover:bg-muted transition-colors">
-            Overview
-          </Link>
-          <Link href="/settings" className="block px-3 py-2 rounded hover:bg-muted transition-colors">
-            Settings
-          </Link>
-          <Link href="/profile" className="block px-3 py-2 rounded hover:bg-muted transition-colors">
-            Profile
-          </Link>
-        </nav>
-      </div>
-      <div className="absolute bottom-0 w-64 p-6 border-t">
-        <p className="text-sm text-muted-foreground truncate mb-2">{user.email}</p>
-        <button
-          onClick={handleSignOut}
-          className="w-full px-3 py-2 text-sm bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-        >
-          Sign Out
-        </button>
-      </div>
-    </>
-  );
-}
-EOF
-
-# Create dashboard page
-cat > app/\(dashboard\)/dashboard/page.tsx << 'EOF'
-import { auth } from '@/lib/auth/auth';
-import { headers } from 'next/headers';
-
-export default async function DashboardPage() {
-  const headersList = await headers();
-  const session = await auth.api.getSession({
-    headers: headersList,
-  });
-
-  if (!session) return null;
-
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-4">Dashboard</h1>
-      <div className="bg-card p-6 rounded-lg border">
-        <p className="text-muted-foreground mb-4">
-          Welcome back, {session.user.name || session.user.email}!
-        </p>
-        {session.user.name && (
-          <p className="text-sm text-muted-foreground mb-2">
-            Name: {session.user.name}
-          </p>
-        )}
-        <p className="text-sm text-muted-foreground mb-2">
-          Email: {session.user.email}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Member since: {new Date(session.user.createdAt || Date.now()).toLocaleDateString()}
-        </p>
-      </div>
-    </div>
   );
 }
 EOF
@@ -1527,9 +979,9 @@ EOF
 
 # Create comprehensive README
 cat > README.md << 'EOF'
-# Next.js 16 Full-Stack Application
+# Next.js 16 Starter with Better Auth
 
-Modern Next.js 16 app with TypeScript, Drizzle ORM, Tailwind CSS, shadcn/ui, PostgreSQL, and Better Auth.
+Minimal Next.js 16 starter with TypeScript, Drizzle ORM, Tailwind CSS, PostgreSQL, and Better Auth pre-configured.
 
 ## 🚀 Quick Start
 
@@ -1537,7 +989,7 @@ Modern Next.js 16 app with TypeScript, Drizzle ORM, Tailwind CSS, shadcn/ui, Pos
 ./start-dev.sh
 ```
 
-Visit http://localhost:3000
+Visit http://localhost:3000 to see "Hello World"
 
 ## 📋 Requirements
 
@@ -1550,10 +1002,10 @@ Visit http://localhost:3000
 - **Next.js 16** - React framework with Turbopack
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
-- **shadcn/ui** - UI components
+- **shadcn/ui** - UI component setup
 - **Drizzle ORM** - Database toolkit
 - **PostgreSQL** - Database
-- **Better Auth** - Authentication
+- **Better Auth** - Authentication (configured, ready to use)
 - **Docker** - Containerization
 
 ## 🔧 Available Scripts
@@ -1592,58 +1044,63 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NODE_ENV="development"
 
 # Google OAuth (optional)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
 
 # Apple OAuth (optional)
-APPLE_CLIENT_ID="your-apple-client-id"
-APPLE_CLIENT_SECRET="your-apple-client-secret"
+APPLE_CLIENT_ID=""
+APPLE_CLIENT_SECRET=""
 ```
 
-Generate secrets with:
+Generate a secure secret with:
 ```bash
 openssl rand -base64 32
 ```
 
-### Setting up OAuth Providers (Optional)
+## 🛡️ Authentication Setup
 
-#### Google OAuth Setup
+Better Auth is fully configured and ready to use. When you're ready to add authentication:
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-2. Create a new project or select existing one
-3. Go to "Credentials" → "Create Credentials" → "OAuth client ID"
-4. Set application type to "Web application"
-5. Add authorized redirect URIs:
-   - Development: `http://localhost:3000/api/auth/callback/google`
-   - Production: `https://yourdomain.com/api/auth/callback/google`
-6. Copy the Client ID and Client Secret to your `.env.local`
+1. **Create your auth pages** (login, register, etc.)
+2. **Update proxy.ts** to add route protection (examples included in comments)
+3. **Use the configured auth client**:
 
-#### Apple OAuth Setup
+```tsx
+// In a client component
+import { authClient } from '@/lib/auth/client';
 
-1. Go to [Apple Developer Portal](https://developer.apple.com/account/resources/identifiers/list)
-2. Create an App ID (if you don't have one)
-3. Create a Service ID and configure "Sign In with Apple"
-4. Set return URLs:
-   - Development: `http://localhost:3000/api/auth/callback/apple`
-   - Production: `https://yourdomain.com/api/auth/callback/apple`
-5. Create a private key for Sign In with Apple
-6. Generate the Client Secret JWT using the private key
-7. Add credentials to your `.env.local`
+// Sign up
+await authClient.signUp.email({
+  email,
+  password,
+  name,
+});
 
-**Note:** Social providers are optional. The app works with email/password authentication by default. Remove the OAuth environment variables if you don't want to use them.
+// Sign in
+await authClient.signIn.email({
+  email,
+  password,
+});
 
-## 🛡️ Authentication
+// Sign out
+await authClient.signOut();
+```
 
-- Server-side auth validation (Next.js 16 best practice)
-- Email/password authentication with Better Auth
-- **Google Sign In** (optional - configure in `.env.local`)
-- **Apple Sign In** (optional - configure in `.env.local`)
-- Session management
-- Automatic redirects with `proxy.ts`
+### Security Features (Pre-configured)
 
-Visit `/login` to sign in or `/register` to create an account.
+✅ **Password Hashing**: Uses scrypt (OWASP recommended)
+✅ **Session Management**: 7-day sessions with automatic refresh
+✅ **CSRF Protection**: Enabled by default
+✅ **Secure Cookies**: HttpOnly, SameSite=lax
+✅ **Next.js 16 Cookie Plugin**: Automatic cookie handling in Server Actions
+✅ **Minimum Password Length**: 12 characters (configurable)
+✅ **OAuth Ready**: Google & Apple (just add credentials)
 
-Social providers will only appear if you've configured the OAuth credentials in your environment variables.
+### Password Requirements
+
+- Minimum: 12 characters (production-grade)
+- Maximum: 128 characters
+- Change in `lib/auth/auth.ts` if needed
 
 ## 🗄️ Database Access
 
@@ -1660,20 +1117,20 @@ npm run db:studio
 
 ```
 ├── app/
-│   ├── (auth)/          # Authentication pages
-│   ├── (dashboard)/     # Protected dashboard pages
-│   ├── (marketing)/     # Public marketing pages
-│   └── api/             # API routes
-├── components/
-│   ├── layout/          # Layout components
-│   ├── ui/              # shadcn/ui components
-│   └── features/        # Feature-specific components
+│   ├── api/auth/[...all]/ # Better Auth API routes
+│   └── page.tsx           # Hello World page
 ├── lib/
-│   ├── auth/            # Better Auth configuration
-│   ├── db/              # Database schema & connection
-│   ├── actions/         # Server actions
-│   └── validations/     # Zod schemas
-├── proxy.ts             # Next.js 16 proxy (replaces middleware)
+│   ├── auth/
+│   │   ├── auth.ts       # Better Auth config (SERVER)
+│   │   └── client.ts     # Auth client (CLIENT)
+│   ├── db/
+│   │   ├── index.ts      # Database connection
+│   │   └── schema.ts     # Database schema
+│   └── constants/
+│       └── routes.ts     # Route constants
+├── types/                # Type definitions
+├── config/              # App configuration
+├── proxy.ts             # Next.js 16 proxy (middleware replacement)
 └── docker-compose.yml   # PostgreSQL & pgAdmin
 ```
 
@@ -1685,69 +1142,63 @@ npm run db:studio
 - **React 19.2**: Latest React features
 - **ESLint Flat Config**: Modern ESLint configuration
 
+## 🔒 Security Best Practices
+
+✅ **Never commit `.env.local`** - Contains secrets
+✅ **Rotate secrets in production** - Generate new `BETTER_AUTH_SECRET`
+✅ **Enable email verification** - Set `requireEmailVerification: true` in production
+✅ **Use HTTPS in production** - Automatically enabled in the config
+✅ **Strong passwords** - 12+ characters enforced
+✅ **CSRF protection** - Enabled by default
+✅ **Secure cookies** - HttpOnly, Secure (production), SameSite
+
+### Configuration Details (lib/auth/auth.ts)
+
+The Better Auth configuration includes:
+
+- ✅ **nextCookies plugin** - Required for Next.js Server Actions
+- ✅ **drizzleAdapter** - Type-safe database operations
+- ✅ **emailAndPassword** - Secure credential authentication
+- ✅ **socialProviders** - OAuth ready (Google, Apple)
+- ✅ **session management** - Auto-refresh, 7-day expiry
+- ✅ **advanced security** - Secure cookies, CSRF protection
+- ✅ **trustedOrigins** - Origin validation
+
 ## 🐛 Troubleshooting
-
-### Infinite redirect loop on login
-If you experience a redirect loop when clicking sign in:
-1. Check that `/api` routes are properly excluded in `proxy.ts` matcher
-2. Clear your browser cookies for `localhost:3000`
-3. Restart the dev server: `npm run dev`
-
-### Social OAuth not working
-1. Verify redirect URIs in Google/Apple console match exactly:
-   - `http://localhost:3000/api/auth/callback/google`
-   - `http://localhost:3000/api/auth/callback/apple`
-2. Check that credentials are in `.env.local` (not `.env`)
-3. Restart dev server after adding OAuth credentials
-
-### NPM warnings during installation
-You may see warnings about deprecated packages like `@esbuild-kit/*`. These are safe to ignore - they come from transitive dependencies and don't affect functionality.
-
-If you see moderate security vulnerabilities, the script automatically runs `npm audit fix`. Some vulnerabilities may require manual updates or are in dev dependencies only.
 
 ### Port already in use
 ```bash
-# Stop all Docker containers
 docker-compose down
-
-# Or kill specific port
 lsof -ti:3000 | xargs kill -9
 ```
 
 ### Database connection failed
 ```bash
-# Reset database
 ./reset-db.sh
 ```
 
 ### Module not found errors
 ```bash
-# Clean install
 ./cleanup.sh
 npm install
 ```
 
-## 📝 Common Tasks
+### NPM warnings
+Warnings about deprecated packages like `@esbuild-kit/*` are safe to ignore - they're transitive dependencies.
 
-### Add a new protected route
-1. Create page in `app/(dashboard)/your-route/page.tsx`
-2. It's automatically protected by the dashboard layout
+## 📝 Next Steps
 
-### Add a new API endpoint
-1. Create route in `app/api/your-endpoint/route.ts`
-2. Use Better Auth's session validation if needed
+1. **Create your pages** - Add login, register, dashboard pages
+2. **Customize styling** - Update Tailwind config and global styles
+3. **Add features** - Build on the authenticated foundation
+4. **Deploy** - Use Vercel, Railway, or your preferred platform
 
-### Add a new database table
-1. Update `lib/db/schema.ts`
-2. Run `npm run db:push`
-3. Update types in `types/index.ts`
+## 📚 Resources
 
-## 🔒 Security Notes
-
-- Never commit `.env.local`
-- Rotate `BETTER_AUTH_SECRET` in production
-- Use strong passwords (min 8 characters)
-- Enable email verification in production
+- [Next.js 16 Docs](https://nextjs.org/docs)
+- [Better Auth Docs](https://www.better-auth.com/docs)
+- [Drizzle ORM Docs](https://orm.drizzle.team)
+- [shadcn/ui](https://ui.shadcn.com)
 
 ## 📄 License
 
@@ -1755,7 +1206,7 @@ MIT
 
 ---
 
-Built with ❤️ using Next.js 16
+Built with Next.js 16 + Better Auth
 EOF
 
 echo ""

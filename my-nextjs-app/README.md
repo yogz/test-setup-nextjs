@@ -1,6 +1,6 @@
-# Next.js 16 Full-Stack Application
+# Next.js 16 Starter with Better Auth
 
-Modern Next.js 16 app with TypeScript, Drizzle ORM, Tailwind CSS, shadcn/ui, PostgreSQL, and Better Auth.
+Minimal Next.js 16 starter with TypeScript, Drizzle ORM, Tailwind CSS, PostgreSQL, and Better Auth pre-configured.
 
 ## 🚀 Quick Start
 
@@ -8,7 +8,7 @@ Modern Next.js 16 app with TypeScript, Drizzle ORM, Tailwind CSS, shadcn/ui, Pos
 ./start-dev.sh
 ```
 
-Visit http://localhost:3000
+Visit http://localhost:3000 to see "Hello World"
 
 ## 📋 Requirements
 
@@ -21,10 +21,10 @@ Visit http://localhost:3000
 - **Next.js 16** - React framework with Turbopack
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
-- **shadcn/ui** - UI components
+- **shadcn/ui** - UI component setup
 - **Drizzle ORM** - Database toolkit
 - **PostgreSQL** - Database
-- **Better Auth** - Authentication
+- **Better Auth** - Authentication (configured, ready to use)
 - **Docker** - Containerization
 
 ## 🔧 Available Scripts
@@ -63,58 +63,63 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NODE_ENV="development"
 
 # Google OAuth (optional)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
 
 # Apple OAuth (optional)
-APPLE_CLIENT_ID="your-apple-client-id"
-APPLE_CLIENT_SECRET="your-apple-client-secret"
+APPLE_CLIENT_ID=""
+APPLE_CLIENT_SECRET=""
 ```
 
-Generate secrets with:
+Generate a secure secret with:
 ```bash
 openssl rand -base64 32
 ```
 
-### Setting up OAuth Providers (Optional)
+## 🛡️ Authentication Setup
 
-#### Google OAuth Setup
+Better Auth is fully configured and ready to use. When you're ready to add authentication:
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-2. Create a new project or select existing one
-3. Go to "Credentials" → "Create Credentials" → "OAuth client ID"
-4. Set application type to "Web application"
-5. Add authorized redirect URIs:
-   - Development: `http://localhost:3000/api/auth/callback/google`
-   - Production: `https://yourdomain.com/api/auth/callback/google`
-6. Copy the Client ID and Client Secret to your `.env.local`
+1. **Create your auth pages** (login, register, etc.)
+2. **Update proxy.ts** to add route protection (examples included in comments)
+3. **Use the configured auth client**:
 
-#### Apple OAuth Setup
+```tsx
+// In a client component
+import { authClient } from '@/lib/auth/client';
 
-1. Go to [Apple Developer Portal](https://developer.apple.com/account/resources/identifiers/list)
-2. Create an App ID (if you don't have one)
-3. Create a Service ID and configure "Sign In with Apple"
-4. Set return URLs:
-   - Development: `http://localhost:3000/api/auth/callback/apple`
-   - Production: `https://yourdomain.com/api/auth/callback/apple`
-5. Create a private key for Sign In with Apple
-6. Generate the Client Secret JWT using the private key
-7. Add credentials to your `.env.local`
+// Sign up
+await authClient.signUp.email({
+  email,
+  password,
+  name,
+});
 
-**Note:** Social providers are optional. The app works with email/password authentication by default. Remove the OAuth environment variables if you don't want to use them.
+// Sign in
+await authClient.signIn.email({
+  email,
+  password,
+});
 
-## 🛡️ Authentication
+// Sign out
+await authClient.signOut();
+```
 
-- Server-side auth validation (Next.js 16 best practice)
-- Email/password authentication with Better Auth
-- **Google Sign In** (optional - configure in `.env.local`)
-- **Apple Sign In** (optional - configure in `.env.local`)
-- Session management
-- Automatic redirects with `proxy.ts`
+### Security Features (Pre-configured)
 
-Visit `/login` to sign in or `/register` to create an account.
+✅ **Password Hashing**: Uses scrypt (OWASP recommended)
+✅ **Session Management**: 7-day sessions with automatic refresh
+✅ **CSRF Protection**: Enabled by default
+✅ **Secure Cookies**: HttpOnly, SameSite=lax
+✅ **Next.js 16 Cookie Plugin**: Automatic cookie handling in Server Actions
+✅ **Minimum Password Length**: 12 characters (configurable)
+✅ **OAuth Ready**: Google & Apple (just add credentials)
 
-Social providers will only appear if you've configured the OAuth credentials in your environment variables.
+### Password Requirements
+
+- Minimum: 12 characters (production-grade)
+- Maximum: 128 characters
+- Change in `lib/auth/auth.ts` if needed
 
 ## 🗄️ Database Access
 
@@ -131,20 +136,20 @@ npm run db:studio
 
 ```
 ├── app/
-│   ├── (auth)/          # Authentication pages
-│   ├── (dashboard)/     # Protected dashboard pages
-│   ├── (marketing)/     # Public marketing pages
-│   └── api/             # API routes
-├── components/
-│   ├── layout/          # Layout components
-│   ├── ui/              # shadcn/ui components
-│   └── features/        # Feature-specific components
+│   ├── api/auth/[...all]/ # Better Auth API routes
+│   └── page.tsx           # Hello World page
 ├── lib/
-│   ├── auth/            # Better Auth configuration
-│   ├── db/              # Database schema & connection
-│   ├── actions/         # Server actions
-│   └── validations/     # Zod schemas
-├── proxy.ts             # Next.js 16 proxy (replaces middleware)
+│   ├── auth/
+│   │   ├── auth.ts       # Better Auth config (SERVER)
+│   │   └── client.ts     # Auth client (CLIENT)
+│   ├── db/
+│   │   ├── index.ts      # Database connection
+│   │   └── schema.ts     # Database schema
+│   └── constants/
+│       └── routes.ts     # Route constants
+├── types/                # Type definitions
+├── config/              # App configuration
+├── proxy.ts             # Next.js 16 proxy (middleware replacement)
 └── docker-compose.yml   # PostgreSQL & pgAdmin
 ```
 
@@ -156,69 +161,63 @@ npm run db:studio
 - **React 19.2**: Latest React features
 - **ESLint Flat Config**: Modern ESLint configuration
 
+## 🔒 Security Best Practices
+
+✅ **Never commit `.env.local`** - Contains secrets
+✅ **Rotate secrets in production** - Generate new `BETTER_AUTH_SECRET`
+✅ **Enable email verification** - Set `requireEmailVerification: true` in production
+✅ **Use HTTPS in production** - Automatically enabled in the config
+✅ **Strong passwords** - 12+ characters enforced
+✅ **CSRF protection** - Enabled by default
+✅ **Secure cookies** - HttpOnly, Secure (production), SameSite
+
+### Configuration Details (lib/auth/auth.ts)
+
+The Better Auth configuration includes:
+
+- ✅ **nextCookies plugin** - Required for Next.js Server Actions
+- ✅ **drizzleAdapter** - Type-safe database operations
+- ✅ **emailAndPassword** - Secure credential authentication
+- ✅ **socialProviders** - OAuth ready (Google, Apple)
+- ✅ **session management** - Auto-refresh, 7-day expiry
+- ✅ **advanced security** - Secure cookies, CSRF protection
+- ✅ **trustedOrigins** - Origin validation
+
 ## 🐛 Troubleshooting
-
-### Infinite redirect loop on login
-If you experience a redirect loop when clicking sign in:
-1. Check that `/api` routes are properly excluded in `proxy.ts` matcher
-2. Clear your browser cookies for `localhost:3000`
-3. Restart the dev server: `npm run dev`
-
-### Social OAuth not working
-1. Verify redirect URIs in Google/Apple console match exactly:
-   - `http://localhost:3000/api/auth/callback/google`
-   - `http://localhost:3000/api/auth/callback/apple`
-2. Check that credentials are in `.env.local` (not `.env`)
-3. Restart dev server after adding OAuth credentials
-
-### NPM warnings during installation
-You may see warnings about deprecated packages like `@esbuild-kit/*`. These are safe to ignore - they come from transitive dependencies and don't affect functionality.
-
-If you see moderate security vulnerabilities, the script automatically runs `npm audit fix`. Some vulnerabilities may require manual updates or are in dev dependencies only.
 
 ### Port already in use
 ```bash
-# Stop all Docker containers
 docker-compose down
-
-# Or kill specific port
 lsof -ti:3000 | xargs kill -9
 ```
 
 ### Database connection failed
 ```bash
-# Reset database
 ./reset-db.sh
 ```
 
 ### Module not found errors
 ```bash
-# Clean install
 ./cleanup.sh
 npm install
 ```
 
-## 📝 Common Tasks
+### NPM warnings
+Warnings about deprecated packages like `@esbuild-kit/*` are safe to ignore - they're transitive dependencies.
 
-### Add a new protected route
-1. Create page in `app/(dashboard)/your-route/page.tsx`
-2. It's automatically protected by the dashboard layout
+## 📝 Next Steps
 
-### Add a new API endpoint
-1. Create route in `app/api/your-endpoint/route.ts`
-2. Use Better Auth's session validation if needed
+1. **Create your pages** - Add login, register, dashboard pages
+2. **Customize styling** - Update Tailwind config and global styles
+3. **Add features** - Build on the authenticated foundation
+4. **Deploy** - Use Vercel, Railway, or your preferred platform
 
-### Add a new database table
-1. Update `lib/db/schema.ts`
-2. Run `npm run db:push`
-3. Update types in `types/index.ts`
+## 📚 Resources
 
-## 🔒 Security Notes
-
-- Never commit `.env.local`
-- Rotate `BETTER_AUTH_SECRET` in production
-- Use strong passwords (min 8 characters)
-- Enable email verification in production
+- [Next.js 16 Docs](https://nextjs.org/docs)
+- [Better Auth Docs](https://www.better-auth.com/docs)
+- [Drizzle ORM Docs](https://orm.drizzle.team)
+- [shadcn/ui](https://ui.shadcn.com)
 
 ## 📄 License
 
@@ -226,4 +225,4 @@ MIT
 
 ---
 
-Built with ❤️ using Next.js 16
+Built with Next.js 16 + Better Auth

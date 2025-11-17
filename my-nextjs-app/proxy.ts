@@ -1,40 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * Next.js 16 Proxy Handler
+ *
+ * This is a minimal configuration. When you add authentication pages,
+ * uncomment and customize the route protection logic below.
+ */
 export default async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  
-  // Public routes that don't require authentication
-  const publicRoutes = ['/', '/about', '/pricing', '/blog'];
-  const isPublicRoute = publicRoutes.some(route => path === route);
-  
-  // Auth routes (login, register, etc.)
-  const isAuthPage = path.startsWith('/login') || 
-                     path.startsWith('/register') ||
-                     path.startsWith('/forgot-password');
-  
-  // Protected routes
-  const isProtectedRoute = path.startsWith('/dashboard') ||
-                           path.startsWith('/settings') ||
-                           path.startsWith('/profile');
 
-  // Don't do anything for public routes or API routes
-  if (isPublicRoute || path.startsWith('/api')) {
+  // Allow all API routes
+  if (path.startsWith('/api')) {
     return NextResponse.next();
   }
 
-  // Get session cookie using Better Auth helper
-  const { getSessionCookie } = await import('better-auth/cookies');
-  const sessionCookie = getSessionCookie(request);
-
-  // Redirect authenticated users away from auth pages
-  if (isAuthPage && sessionCookie) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Redirect unauthenticated users to login
-  if (isProtectedRoute && !sessionCookie) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  // Add your route protection logic here when needed
+  // Example:
+  // const { getSessionCookie } = await import('better-auth/cookies');
+  // const sessionCookie = getSessionCookie(request);
+  //
+  // if (path.startsWith('/dashboard') && !sessionCookie) {
+  //   return NextResponse.redirect(new URL('/login', request.url));
+  // }
 
   return NextResponse.next();
 }

@@ -6,6 +6,10 @@ export const users = pgTable('users', {
   emailVerified: boolean('email_verified').default(false).notNull(),
   name: varchar('name', { length: 255 }),
   image: text('image'),
+  dateOfBirth: varchar('date_of_birth', { length: 10 }),
+  sex: varchar('sex', { length: 20 }),
+  phone: varchar('phone', { length: 20 }),
+  hasCompletedOnboarding: boolean('has_completed_onboarding').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
