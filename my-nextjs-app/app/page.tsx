@@ -58,21 +58,21 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-24 bg-gradient-to-br from-gray-50 to-gray-100">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="z-10 w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-center mb-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-2">
             Upgrade Coaching
           </h1>
-          <p className="text-center text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">
+          <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
             Sign in to enter to your account
           </p>
                 {/* Google Sign In - Secondary Option */}
                 <button
                   onClick={handleGoogleSignIn}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all font-medium"
+                  className="w-full flex items-center justify-center gap-2 sm:gap-3 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all font-medium text-sm sm:text-base active:scale-95"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -81,28 +81,28 @@ export default function Home() {
                   Sign in with Google
                 </button>
 
-                <div className="relative my-6">
+                <div className="relative my-4 sm:my-6">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-300"></div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500 font-medium">Or continue with</span>
+                  <div className="relative flex justify-center text-xs sm:text-sm">
+                    <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Or continue with</span>
                   </div>
                 </div>
 
           {magicLinkSent ? (
             /* Magic Link Sent - Success Message */
-            <div className="text-center space-y-4">
-              <div className="rounded-full bg-green-100 w-16 h-16 flex items-center justify-center mx-auto">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center space-y-3 sm:space-y-4">
+              <div className="rounded-full bg-green-100 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mx-auto">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold">Check your email</h2>
-              <p className="text-gray-600">
-                We've sent a magic link to <strong>{magicLinkEmail}</strong>
+              <h2 className="text-xl sm:text-2xl font-bold">Check your email</h2>
+              <p className="text-sm sm:text-base text-gray-600">
+                We've sent a magic link to <strong className="break-all">{magicLinkEmail}</strong>
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 Click the link in the email to sign in to your account.
               </p>
               <button
@@ -111,7 +111,7 @@ export default function Home() {
                   setMagicLinkEmail('');
                   setShowMagicLink(false);
                 }}
-                className="text-sm text-blue-600 hover:underline font-medium"
+                className="text-xs sm:text-sm text-blue-600 hover:underline font-medium active:text-blue-700"
               >
                 Back to sign in
               </button>
@@ -122,23 +122,23 @@ export default function Home() {
               <div className="space-y-3">
                 <form onSubmit={handleMagicLinkSignIn} className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <label className="block text-xs sm:text-sm font-medium mb-2 text-gray-700">
                       Email Address
                     </label>
                     <input
                       type="email"
                       value={magicLinkEmail}
                       onChange={(e) => setMagicLinkEmail(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="your@email.com"
                       required
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-black text-white px-4 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium flex items-center justify-center gap-2"
+                    className="w-full bg-black text-white px-4 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base active:scale-95"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     Sign in with Magic Link
@@ -146,19 +146,19 @@ export default function Home() {
                 </form>
 
                 {/* Password Sign In - Last Option (Collapsed by default) */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => setShowMagicLink(true)}
-                    className="w-full text-sm text-gray-600 hover:text-gray-900 font-medium"
+                    className="w-full text-xs sm:text-sm text-gray-600 hover:text-gray-900 font-medium active:text-gray-900"
                   >
                     Or sign in with password →
                   </button>
                 </div>
 
-                <p className="mt-6 text-center text-sm text-gray-600">
+                <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
                   Don't have an account?{' '}
-                  <a href="/signup" className="text-blue-600 hover:underline font-semibold">
+                  <a href="/signup" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
                     Sign up
                   </a>
                 </p>
@@ -167,30 +167,30 @@ export default function Home() {
           ) : (
             /* Password Sign In Form */
             <>
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Email</label>
+                  <label className="block text-xs sm:text-sm font-medium mb-2 text-gray-700">Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Password</label>
+                  <label className="block text-xs sm:text-sm font-medium mb-2 text-gray-700">Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     required
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium"
+                  className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium text-sm sm:text-base active:scale-95"
                 >
                   Sign In with Password
                 </button>
@@ -198,7 +198,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setShowMagicLink(false)}
-                className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium mt-4"
+                className="w-full text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium mt-3 sm:mt-4 active:text-blue-700"
               >
                 ← Back to magic link
               </button>

@@ -245,10 +245,35 @@ export default function DashboardPage() {
                     <input
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        // Allow user to enter any format, just ensure it starts with +
+                        if (value.length === 0) {
+                          setPhone('');
+                        } else if (value.startsWith('+')) {
+                          // User is entering international format, allow it as-is
+                          setPhone(value);
+                        } else if (value.startsWith('0') && value.replace(/\D/g, '').length <= 10) {
+                          // French format starting with 0, auto-convert to +33
+                          const digits = value.replace(/\D/g, '');
+                          if (digits.startsWith('0')) {
+                            const formatted = '+33 ' + digits.substring(1);
+                            setPhone(formatted);
+                          } else {
+                            setPhone(value);
+                          }
+                        } else if (!value.includes('+')) {
+                          // No + sign, add it
+                          setPhone('+' + value);
+                        } else {
+                          setPhone(value);
+                        }
+                      }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="+1 (555) 000-0000"
+                      placeholder="+33 6 12 34 56 78"
                     />
+                    <p className="mt-1 text-xs text-gray-500">International format (e.g., +33 6 12 34 56 78, +1 555 123 4567)</p>
                   </div>
                 </div>
               </div>
