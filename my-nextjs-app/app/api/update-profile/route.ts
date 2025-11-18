@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { updateProfileSchema } from '@/lib/validations/auth';
+import { ZodError } from 'zod';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,25 +15,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse the request body
+    // Parse and validate the request body with Zod
     const body = await request.json();
-    const { name, dateOfBirth, sex, phone, hasCompletedOnboarding } = body;
+    const validatedData = updateProfileSchema.parse(body);
 
-    // Update the user in the database
+    // Update the user in the database with validated data
     await db
       .update(users)
       .set({
-        name,
-        dateOfBirth,
-        sex,
-        phone,
-        hasCompletedOnboarding,
+        ...validatedData,
         updatedAt: new Date(),
       })
       .where(eq(users.id, session.user.id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    // Handle Zod validation errors
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          issues: error.issues.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error updating profile:', error);
     return NextResponse.json(
       { error: 'Failed to update profile' },

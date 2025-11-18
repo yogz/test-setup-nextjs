@@ -1,4 +1,6 @@
 import { pgTable, text, timestamp, boolean, varchar } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
 export const users = pgTable('users', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -53,3 +55,52 @@ export const verifications = pgTable('verifications', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// ============================================================================
+// Zod Schemas Generated from Drizzle Tables
+// ============================================================================
+
+// Users table schemas
+export const insertUserSchema = createInsertSchema(users, {
+  email: z.string().email('Invalid email address').max(255),
+  name: z.string().max(255).optional(),
+  dateOfBirth: z.string().includes('-').optional(), // YYYY-MM-DD format
+  sex: z.enum(['male', 'female', 'non-binary', 'prefer-not-to-say']).optional(),
+  phone: z.string().startsWith('+').optional(), // International format
+});
+
+export const selectUserSchema = createSelectSchema(users);
+
+// Sessions table schemas
+export const insertSessionSchema = createInsertSchema(sessions, {
+  token: z.string().length(36), // UUID format
+  userId: z.string().length(36),
+});
+
+export const selectSessionSchema = createSelectSchema(sessions);
+
+// Accounts table schemas
+export const insertAccountSchema = createInsertSchema(accounts, {
+  userId: z.string().length(36),
+  providerId: z.string().min(1),
+  accountId: z.string().min(1),
+});
+
+export const selectAccountSchema = createSelectSchema(accounts);
+
+// Verifications table schemas
+export const insertVerificationSchema = createInsertSchema(verifications);
+export const selectVerificationSchema = createSelectSchema(verifications);
+
+// ============================================================================
+// Type Exports
+// ============================================================================
+
+export type User = z.infer<typeof selectUserSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Session = z.infer<typeof selectSessionSchema>;
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type Account = z.infer<typeof selectAccountSchema>;
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
+export type Verification = z.infer<typeof selectVerificationSchema>;
+export type InsertVerification = z.infer<typeof insertVerificationSchema>;
