@@ -4,6 +4,18 @@ import { useSession } from '@/lib/auth/client';
 import { authClient } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -122,32 +134,37 @@ export default function DashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
             <p className="text-gray-600 mt-1 text-sm sm:text-base">Welcome back, {session.user.name || session.user.email}!</p>
           </div>
-          <button
+          <Button
             onClick={handleSignOut}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+            className="w-full sm:w-auto"
           >
             Sign Out
-          </button>
+          </Button>
         </header>
 
         {/* Profile Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold">Profile Information</h2>
-            {!isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors font-medium w-full sm:w-auto"
-              >
-                Edit Profile
-              </button>
-            )}
-          </div>
-
-          {saveMessage && (
-            <div className={`mb-4 p-3 rounded-lg ${saveMessage.includes('success') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-              {saveMessage}
+        <Card className="mb-6 sm:mb-8">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <CardTitle className="text-xl sm:text-2xl">Profile Information</CardTitle>
+              {!isEditing && (
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  className="w-full sm:w-auto"
+                >
+                  Edit Profile
+                </Button>
+              )}
             </div>
+          </CardHeader>
+
+          <CardContent>
+          {saveMessage && (
+            <Alert className={`mb-4 ${saveMessage.includes('success') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+              <AlertDescription className={saveMessage.includes('success') ? 'text-green-800' : 'text-red-800'}>
+                {saveMessage}
+              </AlertDescription>
+            </Alert>
           )}
 
           {!isEditing ? (
@@ -168,24 +185,24 @@ export default function DashboardPage() {
               {/* User Information Display */}
               <div className="space-y-4 flex-1">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Name</label>
-                  <p className="text-lg">{session.user.name || 'Not set'}</p>
+                  <Label className="text-gray-500">Name</Label>
+                  <p className="text-lg mt-1">{session.user.name || 'Not set'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                  <p className="text-lg">{session.user.email}</p>
+                  <Label className="text-gray-500">Email</Label>
+                  <p className="text-lg mt-1">{session.user.email}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Date of Birth</label>
-                  <p className="text-lg">{(session.user as any).dateOfBirth || 'Not set'}</p>
+                  <Label className="text-gray-500">Date of Birth</Label>
+                  <p className="text-lg mt-1">{(session.user as any).dateOfBirth || 'Not set'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Sex</label>
-                  <p className="text-lg">{(session.user as any).sex || 'Not set'}</p>
+                  <Label className="text-gray-500">Sex</Label>
+                  <p className="text-lg mt-1">{(session.user as any).sex || 'Not set'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Phone</label>
-                  <p className="text-lg">{(session.user as any).phone || 'Not set'}</p>
+                  <Label className="text-gray-500">Phone</Label>
+                  <p className="text-lg mt-1">{(session.user as any).phone || 'Not set'}</p>
                 </div>
               </div>
             </div>
@@ -207,42 +224,46 @@ export default function DashboardPage() {
 
                 {/* Edit Form */}
                 <div className="space-y-4 flex-1">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-                    <input
+                  <div className="space-y-2">
+                    <Label htmlFor="dashboard-name">Name</Label>
+                    <Input
+                      id="dashboard-name"
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Enter your name"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
-                    <input
+                  <div className="space-y-2">
+                    <Label htmlFor="dashboard-dob">Date of Birth</Label>
+                    <Input
+                      id="dashboard-dob"
                       type="date"
                       value={dateOfBirth}
                       onChange={(e) => setDateOfBirth(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Sex</label>
-                    <select
+                  <div className="space-y-2">
+                    <Label htmlFor="dashboard-sex">Sex</Label>
+                    <Select
                       value={sex}
-                      onChange={(e) => setSex(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onValueChange={(value) => setSex(value)}
                     >
-                      <option value="">Select...</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="non-binary">Non-binary</option>
-                      <option value="prefer-not-to-say">Prefer not to say</option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="non-binary">Non-binary</SelectItem>
+                        <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                    <input
+                  <div className="space-y-2">
+                    <Label htmlFor="dashboard-phone">Phone</Label>
+                    <Input
+                      id="dashboard-phone"
                       type="tel"
                       value={phone}
                       onChange={(e) => {
@@ -270,7 +291,6 @@ export default function DashboardPage() {
                           setPhone(value);
                         }
                       }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="+33 6 12 34 56 78"
                     />
                     <p className="mt-1 text-xs text-gray-500">International format (e.g., +33 6 12 34 56 78, +1 555 123 4567)</p>
@@ -280,66 +300,74 @@ export default function DashboardPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:justify-end">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={handleCancelEdit}
-                  className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors order-2 sm:order-1"
                   disabled={isSaving}
+                  className="order-2 sm:order-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
                   disabled={isSaving}
+                  className="order-1 sm:order-2"
                 >
                   {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
+                </Button>
               </div>
             </form>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Account Info Cards */}
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div className="p-4 sm:p-6 bg-white border rounded-xl shadow-sm">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Account
-            </h2>
-            <div className="space-y-2 text-sm">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Account
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
               <p><span className="font-medium text-gray-600">Email:</span> {session.user.email}</p>
               <p><span className="font-medium text-gray-600">User ID:</span> <span className="text-xs">{session.user.id.slice(0, 16)}...</span></p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="p-4 sm:p-6 bg-white border rounded-xl shadow-sm">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Session
-            </h2>
-            <div className="space-y-2 text-sm">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Session
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
               <p><span className="font-medium text-gray-600">Expires:</span> {new Date(session.session.expiresAt).toLocaleDateString()}</p>
               <p><span className="font-medium text-gray-600">Created:</span> {new Date(session.user.createdAt).toLocaleDateString()}</p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="p-4 sm:p-6 bg-white border rounded-xl shadow-sm">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              Status
-            </h2>
-            <div className="space-y-2 text-sm">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
               <p><span className="font-medium text-gray-600">Email Verified:</span> {session.user.emailVerified ? '✓ Yes' : '✗ No'}</p>
               <p><span className="font-medium text-gray-600">Account:</span> Active</p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </main>

@@ -3,6 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -74,98 +86,99 @@ export default function OnboardingPage() {
 
   const canProceedStep1 = formData.name.trim().length > 0;
   const canProceedStep2 = true; // Date of birth is now optional
-  const canProceedStep3 = formData.sex.trim().length > 0 && formData.phone.trim().length > 0;
+  const canProceedStep3 = true; // Sex and phone are now optional
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+      <Card className="w-full max-w-2xl p-6 sm:p-8">
         {/* Progress Bar */}
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs sm:text-sm font-medium text-gray-700">
               Step {step} of 3
             </span>
-            <span className="text-xs sm:text-sm font-medium text-indigo-600">
+            <span className="text-xs sm:text-sm font-medium text-black">
               {Math.round((step / 3) * 100)}% Complete
             </span>
           </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-indigo-600 transition-all duration-300"
-              style={{ width: `${(step / 3) * 100}%` }}
-            />
-          </div>
+          <Progress value={(step / 3) * 100} className="h-2" />
         </div>
 
         {/* Welcome Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <CardHeader className="p-0 mb-6 sm:mb-8">
+          <CardTitle className="text-2xl sm:text-3xl text-center">
             Welcome to Upgrade Coaching!
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">
+          </CardTitle>
+          <CardDescription className="text-sm sm:text-base text-center">
             Let's get to know you better to personalize your experience
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-0">
 
         {/* Step 1: Name */}
         {step === 1 && (
           <div className="space-y-4 sm:space-y-6">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                What's your name?
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="onboarding-name">What's your name?</Label>
+              <Input
+                id="onboarding-name"
                 type="text"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base sm:text-lg"
                 placeholder="Enter your full name"
                 autoFocus
+                className="text-base sm:text-lg"
               />
             </div>
-            <button
+            <Button
               onClick={handleNext}
               disabled={!canProceedStep1}
-              className="w-full bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed text-sm sm:text-base active:scale-95"
+              className="w-full"
+              size="lg"
             >
               Continue
-            </button>
+            </Button>
           </div>
         )}
 
         {/* Step 2: Date of Birth */}
         {step === 2 && (
           <div className="space-y-4 sm:space-y-6">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-2">
+              <Label htmlFor="onboarding-dob">
                 When were you born? <span className="text-gray-500 font-normal">(optional)</span>
-              </label>
-              <input
+              </Label>
+              <Input
+                id="onboarding-dob"
                 type="date"
                 value={formData.dateOfBirth}
                 onChange={(e) =>
                   setFormData({ ...formData, dateOfBirth: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base sm:text-lg"
                 autoFocus
+                className="text-base sm:text-lg"
               />
             </div>
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={handleBack}
-                className="flex-1 bg-gray-200 text-gray-700 px-4 sm:px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm sm:text-base active:scale-95"
+                variant="secondary"
+                className="flex-1"
+                size="lg"
               >
                 Back
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleNext}
                 disabled={!canProceedStep2}
-                className="flex-1 bg-black text-white px-4 sm:px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed text-sm sm:text-base active:scale-95"
+                className="flex-1"
+                size="lg"
               >
                 Continue
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -173,30 +186,33 @@ export default function OnboardingPage() {
         {/* Step 3: Gender & Phone */}
         {step === 3 && (
           <div className="space-y-4 sm:space-y-6">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                How do you identify?
-              </label>
-              <select
+            <div className="space-y-2">
+              <Label htmlFor="onboarding-sex">
+                How do you identify? <span className="text-gray-500 font-normal">(optional)</span>
+              </Label>
+              <Select
                 value={formData.sex}
-                onChange={(e) =>
-                  setFormData({ ...formData, sex: e.target.value })
+                onValueChange={(value) =>
+                  setFormData({ ...formData, sex: value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base sm:text-lg"
-                autoFocus
               >
-                <option value="">Select...</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="prefer-not-to-say">Prefer not to say</option>
-              </select>
+                <SelectTrigger className="w-full text-base sm:text-lg">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="non-binary">Non-binary</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                Phone number <span className="text-red-500">*</span>
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="onboarding-phone">
+                Phone number <span className="text-gray-500 font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="onboarding-phone"
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => {
@@ -224,24 +240,25 @@ export default function OnboardingPage() {
                     setFormData({ ...formData, phone: value });
                   }
                 }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base sm:text-lg"
                 placeholder="+33 6 12 34 56 78"
-                required
-                minLength={8}
+                className="text-base sm:text-lg"
               />
               <p className="mt-1 text-xs text-gray-500">International format (e.g., +33 6 12 34 56 78, +1 555 123 4567)</p>
             </div>
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={handleBack}
-                className="flex-1 bg-gray-200 text-gray-700 px-4 sm:px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm sm:text-base active:scale-95"
+                variant="secondary"
+                className="flex-1"
+                size="lg"
               >
                 Back
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleComplete}
                 disabled={!canProceedStep3 || isSubmitting}
-                className="flex-1 bg-black text-white px-4 sm:px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base active:scale-95"
+                className="flex-1"
+                size="lg"
               >
                 {isSubmitting ? (
                   <>
@@ -270,14 +287,15 @@ export default function OnboardingPage() {
                 ) : (
                   'Complete Setup'
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {/* Skip for now option */}
         <div className="mt-4 sm:mt-6 text-center">
-          <button
+          <Button
+            variant="link"
             onClick={async () => {
               // Mark onboarding as completed without filling data
               await fetch('/api/update-profile', {
@@ -291,12 +309,13 @@ export default function OnboardingPage() {
               });
               window.location.href = '/dashboard';
             }}
-            className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 underline active:text-gray-700"
+            className="text-xs sm:text-sm"
           >
             Skip for now
-          </button>
+          </Button>
         </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
