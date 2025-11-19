@@ -68,7 +68,7 @@ export default function Home() {
         <Card className="p-6 sm:p-8">
           <CardHeader className="p-0 mb-6">
             <CardTitle className="text-2xl sm:text-3xl md:text-4xl text-center">
-              Upgrade Coaching
+              Mon Super Projet
             </CardTitle>
             <CardDescription className="text-center text-sm sm:text-base">
               Sign in to enter to your account
