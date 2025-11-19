@@ -115,6 +115,32 @@ export const onboardingSchema = z.object({
 });
 
 // ============================================================================
+// User Management Schemas (for server actions)
+// ============================================================================
+
+export const updateUserSchema = z.object({
+  name: nameSchema.optional(),
+  dateOfBirth: dateOfBirthSchema,
+  sex: sexSchema,
+  phone: phoneSchema,
+  role: roleSchema.optional(),
+});
+
+export const updateUserByIdSchema = z.object({
+  userId: z.string().uuid('Invalid user ID'),
+  data: updateUserSchema,
+});
+
+export const deleteUserSchema = z.object({
+  userId: z.string().uuid('Invalid user ID'),
+});
+
+export const changeUserRoleSchema = z.object({
+  userId: z.string().uuid('Invalid user ID'),
+  newRole: roleSchema,
+});
+
+// ============================================================================
 // User Schema (for database inserts/updates)
 // ============================================================================
 
@@ -143,4 +169,8 @@ export type SignInInput = z.infer<typeof signInSchema>;
 export type MagicLinkInput = z.infer<typeof magicLinkSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+export type UpdateUserByIdInput = z.infer<typeof updateUserByIdSchema>;
+export type DeleteUserInput = z.infer<typeof deleteUserSchema>;
+export type ChangeUserRoleInput = z.infer<typeof changeUserRoleSchema>;
 export type UserInsert = z.infer<typeof userInsertSchema>;

@@ -16,7 +16,15 @@ import {
   ForbiddenError,
 } from '@/lib/rbac/guards';
 import { PERMISSIONS } from '@/lib/rbac/permissions';
-import { UserRole } from '@/lib/validations/auth';
+import {
+  UserRole,
+  updateUserSchema,
+  deleteUserSchema,
+  changeUserRoleSchema,
+  UpdateUserInput,
+} from '@/lib/validations/auth';
+import { validateData } from '@/lib/validations';
+import { ZodError } from 'zod';
 
 // ============================================================================
 // Example 1: Simple Permission Check
@@ -27,6 +35,16 @@ import { UserRole } from '@/lib/validations/auth';
  */
 export async function deleteUserAction(userId: string) {
   try {
+    // Validate input with Zod
+    const validationResult = validateData(deleteUserSchema, { userId });
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: validationResult.errors,
+      };
+    }
+
     // Only users with users:delete permission can do this
     await requirePermission(PERMISSIONS.users.delete);
 
@@ -40,6 +58,16 @@ export async function deleteUserAction(userId: string) {
     }
     if (error instanceof ForbiddenError) {
       return { success: false, error: 'You do not have permission to delete users' };
+    }
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: error.issues.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message,
+        })),
+      };
     }
     return { success: false, error: 'An unexpected error occurred' };
   }
@@ -91,13 +119,26 @@ export async function getAdminDashboardData() {
  */
 export async function updateUserProfileAction(
   userId: string,
-  data: {
-    name?: string;
-    phone?: string;
-    dateOfBirth?: string;
-  }
+  data: UpdateUserInput
 ) {
   try {
+    // Validate userId
+    if (!userId || typeof userId !== 'string') {
+      return { success: false, error: 'Invalid user ID' };
+    }
+
+    // Validate input data with Zod
+    const validationResult = validateData(updateUserSchema, data);
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: validationResult.errors,
+      };
+    }
+
+    const validatedData = validationResult.data;
+
     // Check if user can access this resource
     // Either has profile:update OR (owns profile AND has profile:updateOwn)
     await requireResourceAccess(
@@ -107,7 +148,7 @@ export async function updateUserProfileAction(
     );
 
     // TODO: Update profile
-    // await db.update(users).set(data).where(eq(users.id, userId));
+    // await db.update(users).set(validatedData).where(eq(users.id, userId));
 
     return {
       success: true,
@@ -119,6 +160,16 @@ export async function updateUserProfileAction(
     }
     if (error instanceof ForbiddenError) {
       return { success: false, error: 'You cannot update this profile' };
+    }
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: error.issues.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message,
+        })),
+      };
     }
     return { success: false, error: 'An unexpected error occurred' };
   }
@@ -167,14 +218,26 @@ export async function inviteTeamMemberAction(email: string) {
  */
 export async function changeUserRoleAction(userId: string, newRole: UserRole) {
   try {
+    // Validate input with Zod
+    const validationResult = validateData(changeUserRoleSchema, { userId, newRole });
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: validationResult.errors,
+      };
+    }
+
+    const { userId: validatedUserId, newRole: validatedRole } = validationResult.data;
+
     await requirePermission(PERMISSIONS.users.changeRole);
 
     // TODO: Update user role
-    // await db.update(users).set({ role: newRole }).where(eq(users.id, userId));
+    // await db.update(users).set({ role: validatedRole }).where(eq(users.id, validatedUserId));
 
     return {
       success: true,
-      message: `User role changed to ${newRole}`,
+      message: `User role changed to ${validatedRole}`,
     };
   } catch (error) {
     if (error instanceof UnauthorizedError) {
@@ -182,6 +245,16 @@ export async function changeUserRoleAction(userId: string, newRole: UserRole) {
     }
     if (error instanceof ForbiddenError) {
       return { success: false, error: 'Only owners can change user roles' };
+    }
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: error.issues.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message,
+        })),
+      };
     }
     return { success: false, error: 'An unexpected error occurred' };
   }

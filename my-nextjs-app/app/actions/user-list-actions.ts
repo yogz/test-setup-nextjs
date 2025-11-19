@@ -14,9 +14,15 @@ import {
   UnauthorizedError,
   ForbiddenError,
 } from '@/lib/rbac/guards';
-import { UserRole } from '@/lib/validations/auth';
+import {
+  UserRole,
+  updateUserSchema,
+  UpdateUserInput,
+} from '@/lib/validations/auth';
 import { hasPermission } from '@/lib/rbac/utils';
 import { PERMISSIONS } from '@/lib/rbac/permissions';
+import { validateData } from '@/lib/validations';
+import { ZodError } from 'zod';
 
 export interface EditableUser {
   id: string;
@@ -132,15 +138,26 @@ export async function getEditableUsers(): Promise<GetEditableUsersResult> {
  */
 export async function updateUserAction(
   userId: string,
-  data: {
-    name?: string;
-    dateOfBirth?: string;
-    sex?: string;
-    phone?: string;
-    role?: UserRole;
-  }
+  data: UpdateUserInput
 ) {
   try {
+    // Validate userId
+    if (!userId || typeof userId !== 'string') {
+      return { success: false, error: 'Invalid user ID' };
+    }
+
+    // Validate input data with Zod
+    const validationResult = validateData(updateUserSchema, data);
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: validationResult.errors,
+      };
+    }
+
+    const validatedData = validationResult.data;
+
     const currentUser = await requireUser();
     const userRole = (currentUser.role as UserRole) || 'member';
 
@@ -155,7 +172,7 @@ export async function updateUserAction(
     }
 
     // Only owners can change roles
-    if (data.role && !hasPermission(userRole, PERMISSIONS.users.changeRole)) {
+    if (validatedData.role && !hasPermission(userRole, PERMISSIONS.users.changeRole)) {
       throw new ForbiddenError('You do not have permission to change user roles');
     }
 
@@ -164,11 +181,11 @@ export async function updateUserAction(
       updatedAt: new Date(),
     };
 
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.dateOfBirth !== undefined) updateData.dateOfBirth = data.dateOfBirth;
-    if (data.sex !== undefined) updateData.sex = data.sex;
-    if (data.phone !== undefined) updateData.phone = data.phone;
-    if (data.role !== undefined) updateData.role = data.role;
+    if (validatedData.name !== undefined) updateData.name = validatedData.name;
+    if (validatedData.dateOfBirth !== undefined) updateData.dateOfBirth = validatedData.dateOfBirth;
+    if (validatedData.sex !== undefined) updateData.sex = validatedData.sex;
+    if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
+    if (validatedData.role !== undefined) updateData.role = validatedData.role;
 
     // Update the user
     await db.update(users)
@@ -185,6 +202,16 @@ export async function updateUserAction(
     }
     if (error instanceof ForbiddenError) {
       return { success: false, error: error.message };
+    }
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        validationErrors: error.issues.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message,
+        })),
+      };
     }
     console.error('Error updating user:', error);
     return { success: false, error: 'An unexpected error occurred' };
