@@ -5,14 +5,18 @@ import { ZodError, ZodSchema } from 'zod';
  * Helper functions for working with Zod schemas
  */
 
-export interface ValidationResult<T> {
-  success: boolean;
-  data?: T;
-  errors?: Array<{
-    path: string;
-    message: string;
-  }>;
-}
+export type ValidationResult<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      errors: Array<{
+        path: string;
+        message: string;
+      }>;
+    };
 
 /**
  * Safely validates data against a Zod schema
