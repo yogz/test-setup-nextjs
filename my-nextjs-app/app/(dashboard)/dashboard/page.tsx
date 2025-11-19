@@ -16,10 +16,14 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { usePermissions } from '@/lib/hooks/usePermissions';
+import { PERMISSIONS } from '@/lib/rbac/permissions';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const { can } = usePermissions();
 
   // Form state
   const [isEditing, setIsEditing] = useState(false);
@@ -321,6 +325,26 @@ export default function DashboardPage() {
           )}
           </CardContent>
         </Card>
+
+        {/* Quick Actions */}
+        {(can(PERMISSIONS.users.update) || can(PERMISSIONS.users.updateOwn)) && (
+          <Card className="mb-6 sm:mb-8">
+            <CardHeader>
+              <CardTitle className="text-xl sm:text-2xl">Quick Actions</CardTitle>
+              <CardDescription>Manage your account and settings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/users">
+                <Button className="w-full sm:w-auto">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  {can(PERMISSIONS.users.update) ? 'Manage Users' : 'View My Profile'}
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Account Info Cards */}
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">

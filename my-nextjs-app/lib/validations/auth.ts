@@ -65,6 +65,10 @@ export const sexSchema = z
   .optional()
   .or(z.literal(''));
 
+export const roleSchema = z.enum(['member', 'coach', 'owner'], {
+  message: 'Invalid role',
+});
+
 // ============================================================================
 // Authentication Schemas
 // ============================================================================
@@ -123,6 +127,7 @@ export const userInsertSchema = z.object({
   dateOfBirth: dateOfBirthSchema,
   sex: sexSchema,
   phone: phoneSchema,
+  role: roleSchema.default('member'),
   hasCompletedOnboarding: z.boolean().default(false),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -132,6 +137,7 @@ export const userInsertSchema = z.object({
 // Type Exports
 // ============================================================================
 
+export type UserRole = z.infer<typeof roleSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
 export type MagicLinkInput = z.infer<typeof magicLinkSchema>;

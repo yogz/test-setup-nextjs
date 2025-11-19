@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { authClient } from '@/lib/auth/client';
 import { Button } from '@/components/ui/button';
 import { GoogleButton } from '@/components/ui/google-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -113,7 +115,7 @@ export default function Home() {
 
                 <div className="relative my-4 sm:my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
+                    <Separator />
                   </div>
                   <div className="relative flex justify-center text-xs sm:text-sm">
                     <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Or continue with</span>
@@ -158,9 +160,9 @@ export default function Home() {
 
                 <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
                   Don't have an account?{' '}
-                  <a href="/signup" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
+                  <Link href="/signup" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
                     Sign up
-                  </a>
+                  </Link>
                 </p>
               </div>
             </>

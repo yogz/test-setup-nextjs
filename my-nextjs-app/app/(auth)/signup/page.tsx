@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { authClient } from '@/lib/auth/client';
 import { Button } from '@/components/ui/button';
 import { GoogleButton } from '@/components/ui/google-button';
@@ -12,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -76,7 +78,7 @@ export default function SignupPage() {
 
             <div className="relative my-4 sm:my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <Separator />
               </div>
               <div className="relative flex justify-center text-xs sm:text-sm">
                 <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Or</span>
@@ -148,9 +150,9 @@ export default function SignupPage() {
 
             <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
               Already have an account?{' '}
-              <a href="/" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
+              <Link href="/" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
                 Sign in
-              </a>
+              </Link>
             </p>
           </CardContent>
         </Card>
