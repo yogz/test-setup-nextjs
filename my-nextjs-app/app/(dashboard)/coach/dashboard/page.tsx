@@ -61,9 +61,6 @@ export default async function CoachDashboardPage() {
                     <Link href="/coach/availability" className="flex-1 md:flex-none">
                         <Button variant="outline" className="w-full">Manage Availability</Button>
                     </Link>
-                    <Link href="/coach/sessions/create" className="flex-1 md:flex-none">
-                        <Button className="w-full">+ Create Session</Button>
-                    </Link>
                 </div>
             </div>
 
