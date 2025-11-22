@@ -30,7 +30,7 @@ export default async function SchedulePage() {
             coach: true, // Get coach details
             bookings: true, // To check capacity and if user already booked
         },
-    });
+    }) as any[]; // TODO: Fix type inference
 
     return (
         <div className="space-y-8 p-8">
@@ -39,10 +39,10 @@ export default async function SchedulePage() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {availableSessions.map((trainingSession) => {
-                    const isBooked = trainingSession.bookings.some(b => b.memberId === session.user.id && b.status === 'CONFIRMED');
-                    const isFull = (trainingSession.capacity || 1) <= trainingSession.bookings.filter(b => b.status === 'CONFIRMED').length;
-                    const userBooking = trainingSession.bookings.find(b => b.memberId === session.user.id && b.status === 'CONFIRMED');
+                {availableSessions.map((trainingSession: any) => {
+                    const isBooked = trainingSession.bookings.some((b: any) => b.memberId === session.user.id && b.status === 'CONFIRMED');
+                    const isFull = (trainingSession.capacity || 1) <= trainingSession.bookings.filter((b: any) => b.status === 'CONFIRMED').length;
+                    const userBooking = trainingSession.bookings.find((b: any) => b.memberId === session.user.id && b.status === 'CONFIRMED');
 
                     return (
                         <Card key={trainingSession.id} className="flex flex-col">
