@@ -1,8 +1,12 @@
 import { z } from 'zod';
 
 export const createBookingSchema = z.object({
-    sessionId: z.string().uuid(),
+    sessionId: z.string().uuid().optional(), // Optional now, as we might book via availabilityId
+    availabilityId: z.string().uuid().optional(),
+    date: z.string().optional(), // ISO Date string YYYY-MM-DD
     memberId: z.string().uuid().optional(), // Optional if booking for self
+}).refine(data => data.sessionId || (data.availabilityId && data.date), {
+    message: "Either sessionId OR (availabilityId AND date) must be provided"
 });
 
 export const cancelBookingSchema = z.object({
@@ -24,7 +28,13 @@ export const updateAvailabilitySchema = z.object({
     dayOfWeek: z.number().min(0).max(6),
     startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
     endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
-    isRecurring: z.boolean().default(true),
+    isRecurring: z.boolean().optional(),
+    // Class Details
+    title: z.string().optional(),
+    description: z.string().optional(),
+    capacity: z.number().min(1).optional(),
+    type: z.enum(['ONE_TO_ONE', 'GROUP']).optional(),
+    durationMinutes: z.number().min(1).optional(),
 });
 
 export const createTrainingSessionSchema = z.object({

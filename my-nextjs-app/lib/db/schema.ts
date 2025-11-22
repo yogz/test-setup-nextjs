@@ -249,6 +249,12 @@ export const coachAvailabilities = pgTable('coach_availabilities', {
   startTime: varchar('start_time', { length: 5 }).notNull(), // HH:MM
   endTime: varchar('end_time', { length: 5 }).notNull(), // HH:MM
   isRecurring: boolean('is_recurring').default(true).notNull(),
+  // Class Details
+  title: varchar('title', { length: 255 }),
+  description: text('description'),
+  capacity: integer('capacity').default(10),
+  type: sessionTypeEnum('type').default('GROUP'),
+  durationMinutes: integer('duration_minutes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

@@ -44,14 +44,32 @@ export default async function AvailabilityPage() {
                             const dayOfWeek = parseInt(formData.get('dayOfWeek') as string);
                             const startTime = formData.get('startTime') as string;
                             const endTime = formData.get('endTime') as string;
+                            const title = formData.get('title') as string;
+                            const description = formData.get('description') as string;
+                            const capacity = parseInt(formData.get('capacity') as string);
+                            const type = formData.get('type') as 'ONE_TO_ONE' | 'GROUP';
 
                             await updateAvailabilityAction({
                                 dayOfWeek,
                                 startTime,
                                 endTime,
                                 isRecurring: true,
+                                title,
+                                description,
+                                capacity,
+                                type,
                             });
                         }} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Class Title</Label>
+                                <Input name="title" placeholder="e.g. Morning Pilates" required />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Description</Label>
+                                <Input name="description" placeholder="Optional description" />
+                            </div>
+
                             <div className="space-y-2">
                                 <Label>Day of Week</Label>
                                 <Select name="dayOfWeek" required>
@@ -77,6 +95,24 @@ export default async function AvailabilityPage() {
                                 </div>
                             </div>
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Type</Label>
+                                    <Select name="type" defaultValue="GROUP">
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="GROUP">Group Class</SelectItem>
+                                            <SelectItem value="ONE_TO_ONE">1-on-1</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Capacity</Label>
+                                    <Input type="number" name="capacity" defaultValue="10" min="1" required />
+                                </div>
+                            </div>
                             <Button type="submit" className="w-full">Add Slot</Button>
                         </form>
                     </CardContent>
@@ -95,10 +131,12 @@ export default async function AvailabilityPage() {
                                 {availabilities.map((slot) => (
                                     <div key={slot.id} className="flex items-center justify-between p-3 border rounded-lg">
                                         <div>
-                                            <p className="font-medium">{DAYS[slot.dayOfWeek]}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {slot.startTime} - {slot.endTime}
-                                            </p>
+                                            <div>
+                                                <p className="font-medium">{slot.title || 'Untitled'} ({DAYS[slot.dayOfWeek]})</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {slot.startTime} - {slot.endTime} • {slot.type} • {slot.capacity} spots
+                                                </p>
+                                            </div>
                                         </div>
                                         <Button variant="ghost" size="sm" className="text-destructive">
                                             Remove
