@@ -38,7 +38,7 @@ export default async function CoachDashboardPage() {
                 },
             },
         },
-    });
+    }) as any; // TODO: Fix type inference
 
     // 2. Upcoming Sessions
     const upcomingSessions = await db.query.trainingSessions.findMany({
@@ -51,7 +51,7 @@ export default async function CoachDashboardPage() {
         with: {
             bookings: true,
         },
-    });
+    }) as any[]; // TODO: Fix type inference
 
     return (
         <div className="space-y-8 p-8">
@@ -92,7 +92,7 @@ export default async function CoachDashboardPage() {
                                     <h3 className="font-medium mb-2">Attendees</h3>
                                     {ongoingSession.bookings.length > 0 ? (
                                         <div className="grid gap-2">
-                                            {ongoingSession.bookings.map((booking) => (
+                                            {ongoingSession.bookings.map((booking: any) => (
                                                 <div key={booking.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
