@@ -158,6 +158,7 @@ export const trainingSessions = pgTable('training_sessions', {
   endTime: timestamp('end_time').notNull(),
   capacity: integer('capacity'), // for GROUP; 1 for 1:1
   status: sessionStatusEnum('status').default('PLANNED').notNull(),
+  notes: text('notes'), // Coach confirmation notes
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -243,9 +244,10 @@ export const coachAvailabilities = pgTable('coach_availabilities', {
     .notNull()
     .references(() => users.id),
   locationId: text('location_id').references(() => locations.id),
-  roomId: text('room_id').references(() => rooms.id),
-  startTime: timestamp('start_time').notNull(),
-  endTime: timestamp('end_time').notNull(),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 6=Saturday
+  startTime: varchar('start_time', { length: 5 }).notNull(), // HH:MM
+  endTime: varchar('end_time', { length: 5 }).notNull(), // HH:MM
+  isRecurring: boolean('is_recurring').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

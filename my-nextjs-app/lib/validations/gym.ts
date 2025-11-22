@@ -27,8 +27,19 @@ export const updateAvailabilitySchema = z.object({
     isRecurring: z.boolean().default(true),
 });
 
+export const createTrainingSessionSchema = z.object({
+    title: z.string().min(1),
+    description: z.string().optional(),
+    startTime: z.string().datetime(), // ISO string
+    endTime: z.string().datetime(), // ISO string
+    capacity: z.number().min(1).default(1),
+    type: z.enum(['ONE_TO_ONE', 'GROUP']),
+    roomId: z.string().uuid().optional(), // Optional for now
+});
+
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
 export type ConfirmSessionInput = z.infer<typeof confirmSessionSchema>;
 export type AddSessionCommentInput = z.infer<typeof addSessionCommentSchema>;
 export type UpdateAvailabilityInput = z.infer<typeof updateAvailabilitySchema>;
+export type CreateTrainingSessionInput = z.infer<typeof createTrainingSessionSchema>;
