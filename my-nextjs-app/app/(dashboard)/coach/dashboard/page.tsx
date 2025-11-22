@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { confirmSessionAction } from '@/app/actions/gym-actions';
 
+import Link from 'next/link';
+
 export default async function CoachDashboardPage() {
     const session = await auth.api.getSession({
         headers: await headers(),
@@ -55,7 +57,14 @@ export default async function CoachDashboardPage() {
         <div className="space-y-8 p-8">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Coach Dashboard</h1>
-                <Button>Manage Availability</Button>
+                <div className="flex gap-2">
+                    <Link href="/coach/availability">
+                        <Button variant="outline">Manage Availability</Button>
+                    </Link>
+                    <Link href="/coach/sessions/create">
+                        <Button>+ Create Session</Button>
+                    </Link>
+                </div>
             </div>
 
             {/* ACTIVE SESSION CARD */}
