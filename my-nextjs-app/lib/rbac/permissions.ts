@@ -71,6 +71,26 @@ export const PERMISSIONS = {
     viewOwn: 'analytics:view_own' as const,
     export: 'analytics:export' as const,
   },
+
+  // Gym Domain
+  bookings: {
+    view: 'bookings:view' as const,
+    viewOwn: 'bookings:view_own' as const,
+    create: 'bookings:create' as const,
+    cancel: 'bookings:cancel' as const,
+    cancelOwn: 'bookings:cancel_own' as const,
+  },
+  sessions: {
+    view: 'sessions:view' as const,
+    viewOwn: 'sessions:view_own' as const,
+    confirm: 'sessions:confirm' as const,
+    comment: 'sessions:comment' as const,
+  },
+  availability: {
+    view: 'availability:view' as const,
+    update: 'availability:update' as const,
+    updateOwn: 'availability:update_own' as const,
+  },
 } as const;
 
 // ============================================================================
@@ -110,6 +130,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     PERMISSIONS.settings.viewOwn,
     PERMISSIONS.settings.updateOwn,
     PERMISSIONS.analytics.viewOwn,
+
+    // Gym permissions
+    PERMISSIONS.bookings.viewOwn,
+    PERMISSIONS.bookings.create,
+    PERMISSIONS.bookings.cancelOwn,
+    PERMISSIONS.sessions.viewOwn,
+    PERMISSIONS.sessions.comment,
+    PERMISSIONS.availability.view,
   ] as const,
 
   /**
@@ -143,6 +171,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     PERMISSIONS.content.publish,
     PERMISSIONS.analytics.view,
     PERMISSIONS.analytics.export,
+
+    // Gym permissions
+    PERMISSIONS.bookings.view,
+    PERMISSIONS.bookings.create,
+    PERMISSIONS.bookings.cancel,
+    PERMISSIONS.sessions.view,
+    PERMISSIONS.sessions.confirm,
+    PERMISSIONS.sessions.comment,
+    PERMISSIONS.availability.view,
+    PERMISSIONS.availability.updateOwn,
   ] as const,
 
   /**
@@ -177,6 +215,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     PERMISSIONS.analytics.view,
     PERMISSIONS.analytics.export,
 
+    // Gym permissions
+    PERMISSIONS.bookings.view,
+    PERMISSIONS.bookings.create,
+    PERMISSIONS.bookings.cancel,
+    PERMISSIONS.sessions.view,
+    PERMISSIONS.sessions.confirm,
+    PERMISSIONS.sessions.comment,
+    PERMISSIONS.availability.view,
+    PERMISSIONS.availability.updateOwn,
+
     // Owner-only permissions
     PERMISSIONS.users.create,
     PERMISSIONS.users.update,
@@ -190,6 +238,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     PERMISSIONS.team.removeMember,
     PERMISSIONS.settings.view,
     PERMISSIONS.settings.update,
+    PERMISSIONS.availability.update, // Owner can update anyone's availability
   ] as const,
 };
 
