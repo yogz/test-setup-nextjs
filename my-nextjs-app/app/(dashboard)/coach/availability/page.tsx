@@ -35,86 +35,11 @@ export default async function AvailabilityPage() {
                 {/* ADD NEW SLOT */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Add Recurring Slot</CardTitle>
-                        <CardDescription>Set your weekly recurring availability.</CardDescription>
+                        <CardTitle>Add Availability</CardTitle>
+                        <CardDescription>Set your recurring weekly schedule.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form action={async (formData) => {
-                            'use server';
-                            const dayOfWeek = parseInt(formData.get('dayOfWeek') as string);
-                            const startTime = formData.get('startTime') as string;
-                            const endTime = formData.get('endTime') as string;
-                            const title = formData.get('title') as string;
-                            const description = formData.get('description') as string;
-                            const capacity = parseInt(formData.get('capacity') as string);
-                            const type = formData.get('type') as 'ONE_TO_ONE' | 'GROUP';
-
-                            await updateAvailabilityAction({
-                                dayOfWeek,
-                                startTime,
-                                endTime,
-                                isRecurring: true,
-                                title,
-                                description,
-                                capacity,
-                                type,
-                            });
-                        }} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Class Title</Label>
-                                <Input name="title" placeholder="e.g. Morning Pilates" required />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Description</Label>
-                                <Input name="description" placeholder="Optional description" />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Day of Week</Label>
-                                <Select name="dayOfWeek" required>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select day" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {DAYS.map((day, index) => (
-                                            <SelectItem key={index} value={index.toString()}>{day}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Start Time</Label>
-                                    <Input type="time" name="startTime" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>End Time</Label>
-                                    <Input type="time" name="endTime" required />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Type</Label>
-                                    <Select name="type" defaultValue="GROUP">
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="GROUP">Group Class</SelectItem>
-                                            <SelectItem value="ONE_TO_ONE">1-on-1</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Capacity</Label>
-                                    <Input type="number" name="capacity" defaultValue="10" min="1" required />
-                                </div>
-                            </div>
-                            <Button type="submit" className="w-full">Add Slot</Button>
-                        </form>
+                        <AvailabilityForm />
                     </CardContent>
                 </Card>
 
