@@ -35,6 +35,7 @@ export const updateAvailabilitySchema = z.object({
     capacity: z.number().min(1).optional(),
     type: z.enum(['ONE_TO_ONE', 'GROUP']).optional(),
     durationMinutes: z.number().min(1).optional(),
+    slotDuration: z.number().min(15).default(60).optional(), // For splitting 1:1 blocks
 });
 
 export const createTrainingSessionSchema = z.object({
