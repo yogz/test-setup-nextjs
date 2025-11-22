@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { createBookingAction, cancelBookingAction } from '@/app/actions/gym-actions';
+import Link from 'next/link';
 
 export default async function SchedulePage() {
     const session = await auth.api.getSession({
@@ -106,6 +107,11 @@ export default async function SchedulePage() {
         <div className="space-y-8 p-8">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Class Schedule</h1>
+                {(session.user.role === 'coach' || session.user.role === 'owner') && (
+                    <Link href="/coach/availability">
+                        <Button variant="outline">Manage Availability</Button>
+                    </Link>
+                )}
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
