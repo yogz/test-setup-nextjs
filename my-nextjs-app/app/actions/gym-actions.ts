@@ -302,57 +302,61 @@ export async function updateAvailabilityAction(data: UpdateAvailabilityInput) {
             return { success: false, error: 'Validation failed', validationErrors: validation.errors };
         }
 
-        const { dayOfWeek, startTime, endTime, isRecurring, title, description, capacity, type, durationMinutes, slotDuration } = validation.data;
+        const { dayOfWeek: daysOfWeek, startTime, endTime, isRecurring, title, description, capacity, type, durationMinutes, slotDuration } = validation.data;
 
-        // SPLITTING LOGIC FOR 1:1
-        if (type === 'ONE_TO_ONE') {
-            const [startHour, startMinute] = startTime.split(':').map(Number);
-            const [endHour, endMinute] = endTime.split(':').map(Number);
+        // Loop through each selected day
+        for (const dayOfWeek of daysOfWeek) {
 
-            const startTotalMinutes = startHour * 60 + startMinute;
-            const endTotalMinutes = endHour * 60 + endMinute;
-            const duration = slotDuration || 60; // Default 60 mins
+            // SPLITTING LOGIC FOR 1:1
+            if (type === 'ONE_TO_ONE') {
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
 
-            let currentStart = startTotalMinutes;
+                const startTotalMinutes = startHour * 60 + startMinute;
+                const endTotalMinutes = endHour * 60 + endMinute;
+                const duration = slotDuration || 60; // Default 60 mins
 
-            while (currentStart + duration <= endTotalMinutes) {
-                const currentEnd = currentStart + duration;
+                let currentStart = startTotalMinutes;
 
-                // Format HH:MM
-                const sH = Math.floor(currentStart / 60).toString().padStart(2, '0');
-                const sM = (currentStart % 60).toString().padStart(2, '0');
-                const eH = Math.floor(currentEnd / 60).toString().padStart(2, '0');
-                const eM = (currentEnd % 60).toString().padStart(2, '0');
+                while (currentStart + duration <= endTotalMinutes) {
+                    const currentEnd = currentStart + duration;
 
+                    // Format HH:MM
+                    const sH = Math.floor(currentStart / 60).toString().padStart(2, '0');
+                    const sM = (currentStart % 60).toString().padStart(2, '0');
+                    const eH = Math.floor(currentEnd / 60).toString().padStart(2, '0');
+                    const eM = (currentEnd % 60).toString().padStart(2, '0');
+
+                    await db.insert(coachAvailabilities).values({
+                        coachId: user.id,
+                        dayOfWeek,
+                        startTime: `${sH}:${sM}`,
+                        endTime: `${eH}:${eM}`,
+                        isRecurring,
+                        title: title || '1:1 Training',
+                        description,
+                        capacity: 1, // Force 1 for 1:1
+                        type: 'ONE_TO_ONE',
+                        durationMinutes: duration,
+                    });
+
+                    currentStart += duration;
+                }
+            } else {
+                // GROUP CLASS (No splitting)
                 await db.insert(coachAvailabilities).values({
                     coachId: user.id,
                     dayOfWeek,
-                    startTime: `${sH}:${sM}`,
-                    endTime: `${eH}:${eM}`,
+                    startTime,
+                    endTime,
                     isRecurring,
-                    title: title || '1:1 Training',
+                    title,
                     description,
-                    capacity: 1, // Force 1 for 1:1
-                    type: 'ONE_TO_ONE',
-                    durationMinutes: duration,
+                    capacity,
+                    type,
+                    durationMinutes,
                 });
-
-                currentStart += duration;
             }
-        } else {
-            // GROUP CLASS (No splitting)
-            await db.insert(coachAvailabilities).values({
-                coachId: user.id,
-                dayOfWeek,
-                startTime,
-                endTime,
-                isRecurring,
-                title,
-                description,
-                capacity,
-                type,
-                durationMinutes,
-            });
         }
 
         revalidatePath('/coach/availability');

@@ -5,12 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { updateAvailabilityAction } from '@/app/actions/gym-actions';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function AvailabilityForm() {
     const [mode, setMode] = useState<'one-to-one' | 'group'>('one-to-one');
+    const [selectedDays, setSelectedDays] = useState<number[]>([]);
+
+    const handleDayToggle = (dayIndex: number) => {
+        setSelectedDays(prev =>
+            prev.includes(dayIndex)
+                ? prev.filter(d => d !== dayIndex)
+                : [...prev, dayIndex]
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -18,8 +28,8 @@ export function AvailabilityForm() {
                 <button
                     onClick={() => setMode('one-to-one')}
                     className={`pb-2 text-sm font-medium transition-colors ${mode === 'one-to-one'
-                            ? 'border-b-2 border-primary text-primary'
-                            : 'text-muted-foreground hover:text-foreground'
+                        ? 'border-b-2 border-primary text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
                         }`}
                 >
                     1:1 Availability
@@ -27,8 +37,8 @@ export function AvailabilityForm() {
                 <button
                     onClick={() => setMode('group')}
                     className={`pb-2 text-sm font-medium transition-colors ${mode === 'group'
-                            ? 'border-b-2 border-primary text-primary'
-                            : 'text-muted-foreground hover:text-foreground'
+                        ? 'border-b-2 border-primary text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
                         }`}
                 >
                     Group Class
@@ -37,13 +47,18 @@ export function AvailabilityForm() {
 
             {mode === 'one-to-one' ? (
                 <form action={async (formData) => {
-                    const dayOfWeek = parseInt(formData.get('dayOfWeek') as string);
                     const startTime = formData.get('startTime') as string;
                     const endTime = formData.get('endTime') as string;
                     const slotDuration = parseInt(formData.get('slotDuration') as string);
 
+                    // We need to manually append the array of days because FormData doesn't handle arrays well by default
+                    // But wait, our server action expects an object with dayOfWeek as array.
+                    // We can't easily pass array via standard form submission without hidden inputs or client-side handling.
+                    // Let's use bind or just call the action directly? No, let's just pass the data.
+                    // Actually, the action takes an input object. We can call it directly.
+
                     await updateAvailabilityAction({
-                        dayOfWeek,
+                        dayOfWeek: selectedDays,
                         startTime,
                         endTime,
                         isRecurring: true,
@@ -53,16 +68,28 @@ export function AvailabilityForm() {
                         slotDuration,
                     });
                 }} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label>Day of Week</Label>
-                        <Select name="dayOfWeek" required>
-                            <SelectTrigger><SelectValue placeholder="Select day" /></SelectTrigger>
-                            <SelectContent>
-                                {DAYS.map((day, index) => (
-                                    <SelectItem key={index} value={index.toString()}>{day}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="space-y-3">
+                        <Label>Days of Week</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {DAYS.map((day, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`day-${index}`}
+                                        checked={selectedDays.includes(index)}
+                                        onCheckedChange={() => handleDayToggle(index)}
+                                    />
+                                    <label
+                                        htmlFor={`day-${index}`}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                        {day}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                        {selectedDays.length === 0 && (
+                            <p className="text-xs text-destructive">Please select at least one day</p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -87,11 +114,10 @@ export function AvailabilityForm() {
                         </Select>
                         <p className="text-xs text-muted-foreground">We will automatically split your time range into slots of this duration.</p>
                     </div>
-                    <Button type="submit" className="w-full">Generate Slots</Button>
+                    <Button type="submit" className="w-full" disabled={selectedDays.length === 0}>Generate Slots</Button>
                 </form>
             ) : (
                 <form action={async (formData) => {
-                    const dayOfWeek = parseInt(formData.get('dayOfWeek') as string);
                     const startTime = formData.get('startTime') as string;
                     const endTime = formData.get('endTime') as string;
                     const title = formData.get('title') as string;
@@ -99,7 +125,7 @@ export function AvailabilityForm() {
                     const capacity = parseInt(formData.get('capacity') as string);
 
                     await updateAvailabilityAction({
-                        dayOfWeek,
+                        dayOfWeek: selectedDays,
                         startTime,
                         endTime,
                         isRecurring: true,
@@ -117,16 +143,28 @@ export function AvailabilityForm() {
                         <Label>Description</Label>
                         <Input name="description" placeholder="Optional description" />
                     </div>
-                    <div className="space-y-2">
-                        <Label>Day of Week</Label>
-                        <Select name="dayOfWeek" required>
-                            <SelectTrigger><SelectValue placeholder="Select day" /></SelectTrigger>
-                            <SelectContent>
-                                {DAYS.map((day, index) => (
-                                    <SelectItem key={index} value={index.toString()}>{day}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="space-y-3">
+                        <Label>Days of Week</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {DAYS.map((day, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`group-day-${index}`}
+                                        checked={selectedDays.includes(index)}
+                                        onCheckedChange={() => handleDayToggle(index)}
+                                    />
+                                    <label
+                                        htmlFor={`group-day-${index}`}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                        {day}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                        {selectedDays.length === 0 && (
+                            <p className="text-xs text-destructive">Please select at least one day</p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -142,7 +180,7 @@ export function AvailabilityForm() {
                         <Label>Capacity</Label>
                         <Input type="number" name="capacity" defaultValue="10" min="1" required />
                     </div>
-                    <Button type="submit" className="w-full">Add Group Class</Button>
+                    <Button type="submit" className="w-full" disabled={selectedDays.length === 0}>Add Group Class</Button>
                 </form>
             )}
         </div>

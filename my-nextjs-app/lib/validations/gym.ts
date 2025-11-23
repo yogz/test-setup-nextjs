@@ -25,7 +25,7 @@ export const addSessionCommentSchema = z.object({
 });
 
 export const updateAvailabilitySchema = z.object({
-    dayOfWeek: z.number().min(0).max(6),
+    dayOfWeek: z.array(z.number().min(0).max(6)).min(1, 'Select at least one day'),
     startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
     endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
     isRecurring: z.boolean().optional(),
