@@ -8,7 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { updateAvailabilityAction } from '@/app/actions/gym-actions';
 
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAYS = [
+    { label: 'Monday', value: 1 },
+    { label: 'Tuesday', value: 2 },
+    { label: 'Wednesday', value: 3 },
+    { label: 'Thursday', value: 4 },
+    { label: 'Friday', value: 5 },
+    { label: 'Saturday', value: 6 },
+    { label: 'Sunday', value: 0 },
+];
 
 export function AvailabilityForm() {
     const [mode, setMode] = useState<'one-to-one' | 'group'>('one-to-one');
@@ -70,19 +78,19 @@ export function AvailabilityForm() {
                 }} className="space-y-4">
                     <div className="space-y-3">
                         <Label>Days of Week</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {DAYS.map((day, index) => (
-                                <div key={index} className="flex items-center space-x-2">
+                        <div className="flex flex-wrap gap-4">
+                            {DAYS.map((day) => (
+                                <div key={day.value} className="flex items-center space-x-2">
                                     <Checkbox
-                                        id={`day-${index}`}
-                                        checked={selectedDays.includes(index)}
-                                        onCheckedChange={() => handleDayToggle(index)}
+                                        id={`day-${day.value}`}
+                                        checked={selectedDays.includes(day.value)}
+                                        onCheckedChange={() => handleDayToggle(day.value)}
                                     />
                                     <label
-                                        htmlFor={`day-${index}`}
+                                        htmlFor={`day-${day.value}`}
                                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                     >
-                                        {day}
+                                        {day.label.slice(0, 3)}
                                     </label>
                                 </div>
                             ))}
@@ -145,19 +153,19 @@ export function AvailabilityForm() {
                     </div>
                     <div className="space-y-3">
                         <Label>Days of Week</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {DAYS.map((day, index) => (
-                                <div key={index} className="flex items-center space-x-2">
+                        <div className="flex flex-wrap gap-4">
+                            {DAYS.map((day) => (
+                                <div key={day.value} className="flex items-center space-x-2">
                                     <Checkbox
-                                        id={`group-day-${index}`}
-                                        checked={selectedDays.includes(index)}
-                                        onCheckedChange={() => handleDayToggle(index)}
+                                        id={`group-day-${day.value}`}
+                                        checked={selectedDays.includes(day.value)}
+                                        onCheckedChange={() => handleDayToggle(day.value)}
                                     />
                                     <label
-                                        htmlFor={`group-day-${index}`}
+                                        htmlFor={`group-day-${day.value}`}
                                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                     >
-                                        {day}
+                                        {day.label.slice(0, 3)}
                                     </label>
                                 </div>
                             ))}
