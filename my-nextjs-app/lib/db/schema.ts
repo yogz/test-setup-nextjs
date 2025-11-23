@@ -8,6 +8,7 @@ import {
   date,
   pgEnum,
 } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -248,6 +249,12 @@ export const coachAvailabilities = pgTable('coach_availabilities', {
   startTime: varchar('start_time', { length: 5 }).notNull(), // HH:MM
   endTime: varchar('end_time', { length: 5 }).notNull(), // HH:MM
   isRecurring: boolean('is_recurring').default(true).notNull(),
+  // Class Details
+  title: varchar('title', { length: 255 }),
+  description: text('description'),
+  capacity: integer('capacity').default(10),
+  type: sessionTypeEnum('type').default('GROUP'),
+  durationMinutes: integer('duration_minutes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -315,6 +322,140 @@ export const selectMemberNoteSchema = createSelectSchema(memberNotes);
 
 export const insertCoachAvailabilitySchema = createInsertSchema(coachAvailabilities);
 export const selectCoachAvailabilitySchema = createSelectSchema(coachAvailabilities);
+
+// ============================================================================
+// RELATIONS
+// ============================================================================
+
+export const usersRelations = relations(users, ({ many }) => ({
+  sessions: many(sessions),
+  accounts: many(accounts),
+  bookings: many(bookings),
+  memberships: many(memberships),
+  coachSessions: many(trainingSessions),
+  coachMembers: many(coachMembers, { relationName: 'coach' }),
+  memberCoaches: many(coachMembers, { relationName: 'member' }),
+  memberNotes: many(memberNotes, { relationName: 'memberNotes' }),
+  coachNotes: many(memberNotes, { relationName: 'coachNotes' }),
+  coachAvailabilities: many(coachAvailabilities),
+  payments: many(payments),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const locationsRelations = relations(locations, ({ many }) => ({
+  rooms: many(rooms),
+  coachAvailabilities: many(coachAvailabilities),
+}));
+
+export const roomsRelations = relations(rooms, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [rooms.locationId],
+    references: [locations.id],
+  }),
+  trainingSessions: many(trainingSessions),
+}));
+
+export const coachMembersRelations = relations(coachMembers, ({ one }) => ({
+  coach: one(users, {
+    fields: [coachMembers.coachId],
+    references: [users.id],
+    relationName: 'coach',
+  }),
+  member: one(users, {
+    fields: [coachMembers.memberId],
+    references: [users.id],
+    relationName: 'member',
+  }),
+}));
+
+export const trainingSessionsRelations = relations(trainingSessions, ({ one, many }) => ({
+  coach: one(users, {
+    fields: [trainingSessions.coachId],
+    references: [users.id],
+  }),
+  room: one(rooms, {
+    fields: [trainingSessions.roomId],
+    references: [rooms.id],
+  }),
+  bookings: many(bookings),
+  memberNotes: many(memberNotes),
+}));
+
+export const membershipsRelations = relations(memberships, ({ one, many }) => ({
+  member: one(users, {
+    fields: [memberships.memberId],
+    references: [users.id],
+  }),
+  bookings: many(bookings),
+  payments: many(payments),
+}));
+
+export const bookingsRelations = relations(bookings, ({ one }) => ({
+  session: one(trainingSessions, {
+    fields: [bookings.sessionId],
+    references: [trainingSessions.id],
+  }),
+  member: one(users, {
+    fields: [bookings.memberId],
+    references: [users.id],
+  }),
+  membership: one(memberships, {
+    fields: [bookings.membershipId],
+    references: [memberships.id],
+  }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  member: one(users, {
+    fields: [payments.memberId],
+    references: [users.id],
+  }),
+  membership: one(memberships, {
+    fields: [payments.membershipId],
+    references: [memberships.id],
+  }),
+}));
+
+export const memberNotesRelations = relations(memberNotes, ({ one }) => ({
+  member: one(users, {
+    fields: [memberNotes.memberId],
+    references: [users.id],
+    relationName: 'memberNotes',
+  }),
+  coach: one(users, {
+    fields: [memberNotes.coachId],
+    references: [users.id],
+    relationName: 'coachNotes',
+  }),
+  session: one(trainingSessions, {
+    fields: [memberNotes.sessionId],
+    references: [trainingSessions.id],
+  }),
+}));
+
+export const coachAvailabilitiesRelations = relations(coachAvailabilities, ({ one }) => ({
+  coach: one(users, {
+    fields: [coachAvailabilities.coachId],
+    references: [users.id],
+  }),
+  location: one(locations, {
+    fields: [coachAvailabilities.locationId],
+    references: [locations.id],
+  }),
+}));
 
 // ============================================================================
 // Type Exports

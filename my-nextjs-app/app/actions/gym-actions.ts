@@ -80,10 +80,73 @@ export async function createBookingAction(data: CreateBookingInput) {
             return { success: false, error: 'Validation failed', validationErrors: validation.errors };
         }
 
-        const { sessionId, memberId } = validation.data;
+        let { sessionId, availabilityId, date, memberId } = validation.data;
         const targetMemberId = memberId || user.id;
 
-        // 1. Check if session exists
+        // LAZY CREATION LOGIC
+        if (!sessionId && availabilityId && date) {
+            // 1. Check if session already exists for this slot
+            const existingSession = await db.query.trainingSessions.findFirst({
+                where: and(
+                    // We need a way to link back to availability, OR just match by time/coach
+                    // For now, let's match by time and coach derived from availability
+                    // But wait, we don't have availability details yet.
+                    // Let's fetch availability first.
+                )
+            });
+
+            // Fetch availability to get details
+            const availability = await db.query.coachAvailabilities.findFirst({
+                where: eq(coachAvailabilities.id, availabilityId),
+            });
+
+            if (!availability) {
+                return { success: false, error: 'Availability slot not found' };
+            }
+
+            // Construct start/end times
+            const [startHour, startMinute] = availability.startTime.split(':').map(Number);
+            const [endHour, endMinute] = availability.endTime.split(':').map(Number);
+
+            const startDateTime = new Date(date);
+            startDateTime.setHours(startHour, startMinute, 0, 0);
+
+            const endDateTime = new Date(date);
+            endDateTime.setHours(endHour, endMinute, 0, 0);
+
+            // Check for existing session by Coach + StartTime
+            const existingRealSession = await db.query.trainingSessions.findFirst({
+                where: and(
+                    eq(trainingSessions.coachId, availability.coachId),
+                    eq(trainingSessions.startTime, startDateTime)
+                )
+            });
+
+            if (existingRealSession) {
+                sessionId = existingRealSession.id;
+            } else {
+                // Create new session from template
+                const [newSession] = await db.insert(trainingSessions).values({
+                    coachId: availability.coachId,
+                    roomId: availability.locationId || 'default-room', // Fallback
+                    title: availability.title || 'Training Session',
+                    description: availability.description,
+                    startTime: startDateTime,
+                    endTime: endDateTime,
+                    capacity: availability.capacity || 1,
+                    type: availability.type || 'ONE_TO_ONE',
+                    status: 'PLANNED',
+                }).returning();
+
+                sessionId = newSession.id;
+            }
+        }
+
+        if (!sessionId) {
+            return { success: false, error: 'Invalid booking request' };
+        }
+
+        // 1. Check if session exists (Redundant if just created, but safe)
         const session = await db.query.trainingSessions.findFirst({
             where: eq(trainingSessions.id, sessionId),
         });
@@ -239,15 +302,62 @@ export async function updateAvailabilityAction(data: UpdateAvailabilityInput) {
             return { success: false, error: 'Validation failed', validationErrors: validation.errors };
         }
 
-        const { dayOfWeek, startTime, endTime, isRecurring } = validation.data;
+        const { dayOfWeek: daysOfWeek, startTime, endTime, isRecurring, title, description, capacity, type, durationMinutes, slotDuration } = validation.data;
 
-        await db.insert(coachAvailabilities).values({
-            coachId: user.id,
-            dayOfWeek,
-            startTime,
-            endTime,
-            isRecurring,
-        });
+        // Loop through each selected day
+        for (const dayOfWeek of daysOfWeek) {
+
+            // SPLITTING LOGIC FOR 1:1
+            if (type === 'ONE_TO_ONE') {
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+
+                const startTotalMinutes = startHour * 60 + startMinute;
+                const endTotalMinutes = endHour * 60 + endMinute;
+                const duration = slotDuration || 60; // Default 60 mins
+
+                let currentStart = startTotalMinutes;
+
+                while (currentStart + duration <= endTotalMinutes) {
+                    const currentEnd = currentStart + duration;
+
+                    // Format HH:MM
+                    const sH = Math.floor(currentStart / 60).toString().padStart(2, '0');
+                    const sM = (currentStart % 60).toString().padStart(2, '0');
+                    const eH = Math.floor(currentEnd / 60).toString().padStart(2, '0');
+                    const eM = (currentEnd % 60).toString().padStart(2, '0');
+
+                    await db.insert(coachAvailabilities).values({
+                        coachId: user.id,
+                        dayOfWeek,
+                        startTime: `${sH}:${sM}`,
+                        endTime: `${eH}:${eM}`,
+                        isRecurring,
+                        title: title || '1:1 Training',
+                        description,
+                        capacity: 1, // Force 1 for 1:1
+                        type: 'ONE_TO_ONE',
+                        durationMinutes: duration,
+                    });
+
+                    currentStart += duration;
+                }
+            } else {
+                // GROUP CLASS (No splitting)
+                await db.insert(coachAvailabilities).values({
+                    coachId: user.id,
+                    dayOfWeek,
+                    startTime,
+                    endTime,
+                    isRecurring,
+                    title,
+                    description,
+                    capacity,
+                    type,
+                    durationMinutes,
+                });
+            }
+        }
 
         revalidatePath('/coach/availability');
         return { success: true, message: 'Availability updated' };

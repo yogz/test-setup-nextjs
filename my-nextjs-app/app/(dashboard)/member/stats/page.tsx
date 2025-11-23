@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { getMemberStatsAction } from '@/app/actions/gym-actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default async function MemberStatsPage() {
     const session = await auth.api.getSession({
@@ -16,11 +18,11 @@ export default async function MemberStatsPage() {
 
     const statsResult = await getMemberStatsAction(session.user.id);
 
-    if (!statsResult.success || !statsResult.data) {
-        return <div>Error loading stats</div>;
+    if (!statsResult.success) {
+        return <div>Error loading stats: {(statsResult as any).error}</div>;
     }
 
-    const { totalBookings, completedSessions, upcomingSessions } = statsResult.data;
+    const { totalBookings, completedSessions, upcomingSessions } = statsResult.data!;
 
     // Calculate attendance rate (completed / (total - upcoming))
     // Avoid division by zero
@@ -29,7 +31,12 @@ export default async function MemberStatsPage() {
 
     return (
         <div className="space-y-8 p-8">
-            <h1 className="text-3xl font-bold tracking-tight">My Stats</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold tracking-tight">My Stats</h1>
+                <Link href="/schedule">
+                    <Button>Book a Class</Button>
+                </Link>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-3">
                 <Card>
