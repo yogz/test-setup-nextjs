@@ -24,7 +24,7 @@ export default async function SchedulePage() {
     const existingSessions = await db.query.trainingSessions.findMany({
         where: and(
             gte(trainingSessions.startTime, now),
-            eq(trainingSessions.status, 'PLANNED')
+            eq(trainingSessions.status, 'scheduled')
         ),
         orderBy: [asc(trainingSessions.startTime)],
         with: {

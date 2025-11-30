@@ -1,0 +1,128 @@
+import { auth } from '@/lib/auth/auth';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { db } from '@/lib/db';
+import { availabilityAdditions, blockedSlots, rooms } from '@/lib/db/schema';
+import { eq, and, gte } from 'drizzle-orm';
+import { AddAvailabilityExceptionForm } from '@/components/coach/add-availability-exception-form';
+import { AvailabilityAdditionsList } from '@/components/coach/availability-additions-list';
+
+export default async function CoachAvailabilityExceptionsPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session || (session.user.role !== 'coach' && session.user.role !== 'owner')) {
+    redirect('/dashboard');
+  }
+
+  // Fetch all rooms
+  const allRooms = await db.query.rooms.findMany({
+    columns: {
+      id: true,
+      name: true,
+    },
+  });
+
+  // Fetch availability additions (future only)
+  const additions = await db.query.availabilityAdditions.findMany({
+    where: and(
+      eq(availabilityAdditions.coachId, session.user.id),
+      gte(availabilityAdditions.startTime, new Date())
+    ),
+    orderBy: (table, { asc }) => [asc(table.startTime)],
+  });
+
+  // Fetch blocked slots for reference
+  const blocked = await db.query.blockedSlots.findMany({
+    where: and(
+      eq(blockedSlots.coachId, session.user.id),
+      gte(blockedSlots.startTime, new Date())
+    ),
+    orderBy: (table, { asc }) => [asc(table.startTime)],
+    limit: 5,
+  });
+
+  return (
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Créneaux exceptionnels</h1>
+        <p className="mt-1 text-gray-600">
+          Gérez vos disponibilités en dehors de votre semaine type
+        </p>
+      </div>
+
+      {/* Availability Additions Section */}
+      <div className="mb-8 rounded-lg border bg-white p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Créneaux ajoutés</h2>
+            <p className="text-sm text-gray-600">
+              Disponibilités exceptionnelles que vous avez ajoutées
+            </p>
+          </div>
+          <AddAvailabilityExceptionForm rooms={allRooms} />
+        </div>
+        <AvailabilityAdditionsList additions={additions} />
+      </div>
+
+      {/* Blocked Slots Reference */}
+      {blocked.length > 0 && (
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h2 className="mb-4 text-xl font-semibold">Créneaux bloqués récents</h2>
+          <div className="space-y-2">
+            {blocked.map((block) => (
+              <div
+                key={block.id}
+                className="flex items-center justify-between rounded-lg border bg-white p-3"
+              >
+                <div>
+                  <div className="font-medium">
+                    {new Date(block.startTime).toLocaleDateString('fr-FR', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    })}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {new Date(block.startTime).toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    -{' '}
+                    {new Date(block.endTime).toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                  {block.reason && (
+                    <div className="mt-1 text-sm text-gray-500">{block.reason}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Info Section */}
+      <div className="mt-6 rounded-lg bg-blue-50 p-4">
+        <h3 className="font-semibold text-blue-900">Différences entre les types de créneaux</h3>
+        <div className="mt-2 space-y-2 text-sm text-blue-800">
+          <div>
+            <span className="font-medium">🟢 Créneaux ajoutés:</span> Disponibilités exceptionnelles
+            en dehors de votre semaine type (ex: un samedi spécial, un rattrapage)
+          </div>
+          <div>
+            <span className="font-medium">🔴 Créneaux bloqués:</span> Périodes où vous n'êtes PAS
+            disponible malgré votre semaine type (ex: vacances, rendez-vous)
+          </div>
+          <div>
+            <span className="font-medium">📅 Semaine type:</span> Votre planning récurrent hebdomadaire
+            (géré dans la section Sessions)
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
