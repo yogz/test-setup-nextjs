@@ -61,7 +61,7 @@ export async function createTrainingSessionAction(data: CreateTrainingSessionInp
             endTime: new Date(endTime),
             capacity,
             type,
-            status: 'PLANNED',
+            status: 'scheduled',
         });
 
         revalidatePath('/coach/schedule');
@@ -170,7 +170,7 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
                 eq(trainingSessions.coachId, session.coachId),
                 eq(trainingSessions.roomId, session.roomId),
                 eq(trainingSessions.isRecurring, true),
-                eq(trainingSessions.status, 'PLANNED'),
+                eq(trainingSessions.status, 'scheduled'),
                 gte(trainingSessions.startTime, new Date())
             ),
             orderBy: [asc(trainingSessions.startTime)],
@@ -358,7 +358,7 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
                     endTime: end,
                     capacity: 1,
                     type: 'ONE_TO_ONE',
-                    status: 'PLANNED',
+                    status: 'scheduled',
                     isRecurring: false,
                 })
                 .returning();
@@ -398,7 +398,7 @@ export async function confirmSessionAction(data: ConfirmSessionInput) {
 
         await db
             .update(trainingSessions)
-            .set({ status: 'COMPLETED', notes: notes || undefined }) // Assuming notes field exists or we ignore it if not
+            .set({ status: 'completed', notes: notes || undefined })
             .where(eq(trainingSessions.id, sessionId));
 
         revalidatePath('/coach/sessions');
@@ -557,7 +557,7 @@ export async function getMemberStatsAction(memberId?: string) {
             .where(and(
                 eq(bookings.memberId, targetId),
                 eq(bookings.status, 'CONFIRMED'),
-                eq(trainingSessions.status, 'PLANNED'),
+                eq(trainingSessions.status, 'scheduled'),
                 sql`${trainingSessions.startTime} > NOW()`
             ));
         const upcomingSessions = Number(upcomingSessionsResult[0]?.count || 0);

@@ -88,7 +88,7 @@ export async function createSessionFromFormAction(formData: FormData) {
                     recurrenceEndDate: endDate,
                     startTime,
                     endTime,
-                    status: 'PLANNED' as const,
+                    status: 'scheduled' as const,
                 });
             }
 
@@ -128,7 +128,7 @@ export async function createSessionFromFormAction(formData: FormData) {
             isRecurring: false,
             startTime,
             endTime,
-            status: 'PLANNED',
+            status: 'scheduled',
         });
     }
 

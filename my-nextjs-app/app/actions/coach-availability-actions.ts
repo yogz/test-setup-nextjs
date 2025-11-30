@@ -170,7 +170,7 @@ export async function cancelSessionAction(sessionId: string) {
     }
 
     await db.update(trainingSessions)
-        .set({ status: 'CANCELLED' })
+        .set({ status: 'cancelled' })
         .where(eq(trainingSessions.id, sessionId));
 
     revalidatePath('/coach/sessions');
@@ -200,7 +200,7 @@ export async function rescheduleSessionAction(sessionId: string, newDate: Date, 
         .set({
             startTime: start,
             endTime: end,
-            status: 'PLANNED' // Reset status if it was cancelled? Or keep as is? Let's assume reschedule implies active.
+            status: 'scheduled'
         })
         .where(eq(trainingSessions.id, sessionId));
 

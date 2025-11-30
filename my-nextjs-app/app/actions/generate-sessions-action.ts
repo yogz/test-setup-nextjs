@@ -99,7 +99,7 @@ export async function generateSessionsFromTemplateAction(weeksAhead: number = 4)
                 type: 'ONE_TO_ONE',
                 startTime: sessionStart,
                 endTime: sessionEnd,
-                status: 'PLANNED',
+                status: 'scheduled',
                 roomId: slot.roomId || validRoomId, // Use slot's room or default room
                 capacity: 1,
                 createdAt: new Date(),

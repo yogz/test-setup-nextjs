@@ -78,9 +78,10 @@ export const verifications = pgTable('verifications', {
 
 export const sessionTypeEnum = pgEnum('session_type', ['ONE_TO_ONE', 'GROUP']);
 export const sessionStatusEnum = pgEnum('session_status', [
-  'PLANNED',
-  'CANCELLED',
-  'COMPLETED',
+  'scheduled',
+  'completed',
+  'cancelled',
+  'no_show',
 ]);
 export const bookingStatusEnum = pgEnum('booking_status', [
   'CONFIRMED',
@@ -88,6 +89,10 @@ export const bookingStatusEnum = pgEnum('booking_status', [
   'CANCELLED_BY_COACH',
   'NO_SHOW',
   'WAITLIST',
+]);
+export const recurringBookingStatusEnum = pgEnum('recurring_booking_status', [
+  'ACTIVE',
+  'CANCELLED',
 ]);
 export const membershipTypeEnum = pgEnum('membership_type', [
   'PACK',
@@ -159,7 +164,7 @@ export const trainingSessions = pgTable('training_sessions', {
   startTime: timestamp('start_time').notNull(),
   endTime: timestamp('end_time').notNull(),
   capacity: integer('capacity'), // for GROUP; 1 for 1:1
-  status: sessionStatusEnum('status').default('PLANNED').notNull(),
+  status: sessionStatusEnum('status').default('scheduled').notNull(),
   notes: text('notes'), // Coach confirmation notes
   duration: integer('duration'), // duration in minutes
   weekdays: jsonb('weekdays').$type<number[]>(), // array of weekday numbers (0=Sunday, 6=Saturday)
@@ -169,6 +174,12 @@ export const trainingSessions = pgTable('training_sessions', {
   minParticipants: integer('min_participants'),
   visibility: varchar('visibility', { length: 20 }).default('PUBLIC'), // PUBLIC, PRIVATE
   material: text('material'),
+
+  // NEW FIELDS for tracking origin
+  recurringBookingId: text('recurring_booking_id').references(() => recurringBookings.id, { onDelete: 'cascade' }),
+  oneTimeBookingId: text('one_time_booking_id').references(() => bookings.id, { onDelete: 'cascade' }),
+  memberId: text('member_id').references(() => users.id), // Direct member reference for quick queries
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -262,6 +273,79 @@ export const coachAvailabilities = pgTable('coach_availabilities', {
 });
 
 // ============================================================================
+// COACH AVAILABILITY & SETTINGS
+// ============================================================================
+
+export const coachSettings = pgTable('coach_settings', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  defaultRoomId: text('default_room_id').references(() => rooms.id),
+  defaultDuration: integer('default_duration').default(60).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const weeklyAvailability = pgTable('weekly_availability', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 1=Monday, etc.
+  startTime: varchar('start_time', { length: 5 }).notNull(), // "HH:MM"
+  endTime: varchar('end_time', { length: 5 }).notNull(), // "HH:MM"
+  isIndividual: boolean('is_individual').default(false).notNull(),
+  isGroup: boolean('is_group').default(false).notNull(),
+  roomId: text('room_id').references(() => rooms.id), // Optional room assignment
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const blockedSlots = pgTable('blocked_slots', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  reason: text('reason'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const availabilityAdditions = pgTable('availability_additions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  roomId: text('room_id').references(() => rooms.id),
+  reason: text('reason'), // "Rattrapage", "Demande spéciale"
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ============================================================================
+// RECURRING BOOKINGS (Réservations récurrentes)
+// ============================================================================
+
+export const recurringBookings = pgTable('recurring_bookings', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  memberId: text('member_id')
+    .notNull()
+    .references(() => users.id),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 6=Saturday
+  startTime: varchar('start_time', { length: 5 }).notNull(), // "HH:MM"
+  endTime: varchar('end_time', { length: 5 }).notNull(), // "HH:MM"
+  startDate: date('start_date').notNull(), // Date de début de la récurrence
+  endDate: date('end_date'), // null = indéfini
+  status: recurringBookingStatusEnum('status').default('ACTIVE').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  cancelledAt: timestamp('cancelled_at'),
+});
+
+// ============================================================================
 // Zod Schemas Generated from Drizzle Tables
 // ============================================================================
 
@@ -326,6 +410,12 @@ export const selectMemberNoteSchema = createSelectSchema(memberNotes);
 export const insertCoachAvailabilitySchema = createInsertSchema(coachAvailabilities);
 export const selectCoachAvailabilitySchema = createSelectSchema(coachAvailabilities);
 
+export const insertAvailabilityAdditionSchema = createInsertSchema(availabilityAdditions);
+export const selectAvailabilityAdditionSchema = createSelectSchema(availabilityAdditions);
+
+export const insertRecurringBookingSchema = createInsertSchema(recurringBookings);
+export const selectRecurringBookingSchema = createSelectSchema(recurringBookings);
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -369,44 +459,11 @@ export type InsertMemberNote = z.infer<typeof insertMemberNoteSchema>;
 export type CoachAvailability = z.infer<typeof selectCoachAvailabilitySchema>;
 export type InsertCoachAvailability = z.infer<typeof insertCoachAvailabilitySchema>;
 
-// ============================================================================
-// COACH AVAILABILITY & SETTINGS
-// ============================================================================
+export type AvailabilityAddition = z.infer<typeof selectAvailabilityAdditionSchema>;
+export type InsertAvailabilityAddition = z.infer<typeof insertAvailabilityAdditionSchema>;
 
-export const coachSettings = pgTable('coach_settings', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  coachId: text('coach_id')
-    .notNull()
-    .references(() => users.id),
-  defaultRoomId: text('default_room_id').references(() => rooms.id),
-  defaultDuration: integer('default_duration').default(60).notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
-export const weeklyAvailability = pgTable('weekly_availability', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  coachId: text('coach_id')
-    .notNull()
-    .references(() => users.id),
-  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 1=Monday, etc.
-  startTime: varchar('start_time', { length: 5 }).notNull(), // "HH:MM"
-  endTime: varchar('end_time', { length: 5 }).notNull(), // "HH:MM"
-  isIndividual: boolean('is_individual').default(false).notNull(),
-  isGroup: boolean('is_group').default(false).notNull(),
-  roomId: text('room_id').references(() => rooms.id), // Optional room assignment
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-export const blockedSlots = pgTable('blocked_slots', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  coachId: text('coach_id')
-    .notNull()
-    .references(() => users.id),
-  startTime: timestamp('start_time').notNull(),
-  endTime: timestamp('end_time').notNull(),
-  reason: text('reason'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+export type RecurringBooking = z.infer<typeof selectRecurringBookingSchema>;
+export type InsertRecurringBooking = z.infer<typeof insertRecurringBookingSchema>;
 
 // ============================================================================
 // RELATIONS
@@ -419,6 +476,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   coachSettings: many(coachSettings),
   weeklyAvailability: many(weeklyAvailability),
   blockedSlots: many(blockedSlots),
+  availabilityAdditions: many(availabilityAdditions),
+  recurringBookings: many(recurringBookings),
 }));
 
 export const trainingSessionsRelations = relations(trainingSessions, ({ one, many }) => ({
@@ -429,6 +488,18 @@ export const trainingSessionsRelations = relations(trainingSessions, ({ one, man
   room: one(rooms, {
     fields: [trainingSessions.roomId],
     references: [rooms.id],
+  }),
+  member: one(users, {
+    fields: [trainingSessions.memberId],
+    references: [users.id],
+  }),
+  recurringBooking: one(recurringBookings, {
+    fields: [trainingSessions.recurringBookingId],
+    references: [recurringBookings.id],
+  }),
+  oneTimeBooking: one(bookings, {
+    fields: [trainingSessions.oneTimeBookingId],
+    references: [bookings.id],
   }),
   bookings: many(bookings),
 }));
@@ -482,4 +553,27 @@ export const blockedSlotsRelations = relations(blockedSlots, ({ one }) => ({
     fields: [blockedSlots.coachId],
     references: [users.id],
   }),
+}));
+
+export const availabilityAdditionsRelations = relations(availabilityAdditions, ({ one }) => ({
+  coach: one(users, {
+    fields: [availabilityAdditions.coachId],
+    references: [users.id],
+  }),
+  room: one(rooms, {
+    fields: [availabilityAdditions.roomId],
+    references: [rooms.id],
+  }),
+}));
+
+export const recurringBookingsRelations = relations(recurringBookings, ({ one, many }) => ({
+  member: one(users, {
+    fields: [recurringBookings.memberId],
+    references: [users.id],
+  }),
+  coach: one(users, {
+    fields: [recurringBookings.coachId],
+    references: [users.id],
+  }),
+  sessions: many(trainingSessions),
 }));
