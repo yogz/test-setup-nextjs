@@ -4,9 +4,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { trainingSessions, users, rooms } from '@/lib/db/schema';
 import { eq, desc, and, gte } from 'drizzle-orm';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WeeklyTemplateEditor } from '@/components/coach/weekly-template-editor';
-import { CoachCalendar } from '@/components/coach/coach-calendar';
+import { CoachSessionsView } from '@/components/coach/coach-sessions-view';
 import { getCoachSettingsAction, getWeeklyAvailabilityAction, getBlockedSlotsAction } from '@/app/actions/coach-availability-actions';
 
 export default async function CoachSessionsPage() {
@@ -46,41 +44,14 @@ export default async function CoachSessionsPage() {
     ]);
 
     return (
-        <div className="container mx-auto py-10 space-y-8">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Gestion des disponibilités</h1>
-                    <p className="text-muted-foreground">
-                        Configurez votre semaine type et gérez votre calendrier.
-                    </p>
-                </div>
-            </div>
-
-            <Tabs defaultValue="calendar" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="template">Ma semaine type</TabsTrigger>
-                    <TabsTrigger value="calendar">Calendrier</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="template" className="space-y-4">
-                    <WeeklyTemplateEditor
-                        initialSettings={settings}
-                        initialAvailability={weeklyAvailability}
-                        rooms={allRooms}
-                    />
-                </TabsContent>
-
-                <TabsContent value="calendar" className="space-y-4">
-                    <CoachCalendar
-                        weeklyAvailability={weeklyAvailability}
-                        blockedSlots={blockedSlots}
-                        sessions={coachSessions}
-                        rooms={allRooms}
-                        members={allMembers}
-                        coachName={session.user.name || 'Coach'}
-                    />
-                </TabsContent>
-            </Tabs>
-        </div>
+        <CoachSessionsView
+            settings={settings}
+            weeklyAvailability={weeklyAvailability}
+            coachSessions={coachSessions}
+            blockedSlots={blockedSlots}
+            allRooms={allRooms}
+            allMembers={allMembers}
+            coachName={session.user.name || 'Coach'}
+        />
     );
 }
