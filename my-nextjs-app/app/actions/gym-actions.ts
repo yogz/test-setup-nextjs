@@ -313,6 +313,7 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
         });
 
         if (!isInAvailability) {
+            console.log('Slot not in availability:', slotStartTime, dayOfWeek);
             return { success: false, error: 'This time slot is not available for booking' };
         }
 
@@ -326,6 +327,7 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
         });
 
         if (blocked) {
+            console.log('Slot blocked');
             return { success: false, error: 'This slot is blocked' };
         }
 
@@ -338,6 +340,7 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
         });
 
         if (existingSession) {
+            console.log('Session already exists');
             return { success: false, error: 'A session already exists at this time' };
         }
 
@@ -370,8 +373,10 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
 
         revalidatePath('/schedule');
         revalidatePath('/bookings');
+        console.log('Booking successful for member:', targetMemberId);
         return { success: true, message: 'Session booked successfully' };
     } catch (error) {
+        console.error('Booking error:', error);
         return handleActionError(error);
     }
 }

@@ -143,11 +143,15 @@ export function MemberCalendar({ sessions, availableSlots, userId }: MemberCalen
         startTransition(async () => {
             if (selectedEvent.eventType === 'available' && selectedEvent.slot) {
                 const slot = selectedEvent.slot;
-                await bookAvailableSlotAction({
+                const result = await bookAvailableSlotAction({
                     coachId: slot.coachId,
                     startTime: slot.startTime.toISOString(),
                     endTime: slot.endTime.toISOString(),
                 });
+                if (!result.success) {
+                    alert(result.error);
+                    return;
+                }
             } else if (selectedEvent.session) {
                 const session = selectedEvent.session;
                 const userBooking = session.bookings.find(
