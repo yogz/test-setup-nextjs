@@ -10,6 +10,7 @@ interface CoachSessionsViewProps {
     weeklyAvailability: any[];
     coachSessions: any[];
     blockedSlots: any[];
+    availabilityAdditions?: any[];
     allRooms: any[];
     allMembers: any[];
     coachName: string;
@@ -20,6 +21,7 @@ export function CoachSessionsView({
     weeklyAvailability,
     coachSessions,
     blockedSlots,
+    availabilityAdditions,
     allRooms,
     allMembers,
     coachName
@@ -30,7 +32,7 @@ export function CoachSessionsView({
                 {/* Header */}
                 <div className="space-y-1.5">
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
-                        {coachName} Sessions
+                        Mon Planning
                     </h1>
                     <p className="text-slate-600 text-sm md:text-base font-light">
                         Visualisez votre calendrier et gérez vos disponibilités.
@@ -60,6 +62,7 @@ export function CoachSessionsView({
                         <DailySlotList
                             weeklyAvailability={weeklyAvailability}
                             blockedSlots={blockedSlots}
+                            availabilityAdditions={availabilityAdditions}
                             sessions={coachSessions}
                             rooms={allRooms}
                             members={allMembers}

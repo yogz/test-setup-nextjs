@@ -54,10 +54,23 @@ const DAYS = [
     { value: 0, label: 'Dimanche' },
 ];
 
+// Generate time slots based on default duration
+const generateTimeSlots = (duration: number = 60) => {
+    const slots = [];
+    for (let hour = 6; hour < 22; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+            const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            slots.push(timeStr);
+        }
+    }
+    return slots;
+};
+
 export function WeeklyTemplateEditor({ initialSettings, initialAvailability, rooms }: WeeklyTemplateEditorProps) {
     const [settings, setSettings] = useState(initialSettings);
     const [availability, setAvailability] = useState<DayAvailability[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const timeSlots = generateTimeSlots();
 
     // Initialize availability state from props
     useEffect(() => {
@@ -71,18 +84,18 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                     endTime: s.endTime,
                     isIndividual: s.isIndividual ?? false,
                     isGroup: s.isGroup ?? false,
-                    roomId: s.roomId || undefined,
+                    roomId: s.roomId || settings.defaultRoomId || undefined,
                 })) : [{
                     startTime: '09:00',
                     endTime: '18:00',
                     isIndividual: false,
                     isGroup: false,
-                    roomId: undefined,
+                    roomId: settings.defaultRoomId || undefined,
                 }]
             };
         });
         setAvailability(initialState);
-    }, [initialAvailability]);
+    }, [initialAvailability, settings.defaultRoomId]);
 
     const handleSettingsChange = async (key: keyof CoachSettings, value: any) => {
         const newSettings = { ...settings, [key]: value === '' ? null : value };
@@ -137,6 +150,16 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
             if (day.dayOfWeek === dayOfWeek) {
                 const newSlots = [...day.slots];
                 newSlots[index] = { ...newSlots[index], [field]: value };
+
+                // Auto-calculate end time when start time changes
+                if (field === 'startTime' && value) {
+                    const [hours, minutes] = value.split(':').map(Number);
+                    const totalMinutes = hours * 60 + minutes + settings.defaultDuration;
+                    const endHours = Math.floor(totalMinutes / 60);
+                    const endMinutes = totalMinutes % 60;
+                    newSlots[index].endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+                }
+
                 return { ...day, slots: newSlots };
             }
             return day;
@@ -250,26 +273,40 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                                                 {/* Time and Room Selection */}
                                                 <div className="flex items-center gap-4 flex-wrap">
                                                     <div className="flex items-center gap-2">
-                                                        <Input
-                                                            type="time"
-                                                            className="w-32"
+                                                        <Select
                                                             value={slot.startTime}
-                                                            onChange={(e) => updateSlot(day.dayOfWeek, index, 'startTime', e.target.value)}
-                                                        />
-                                                        <span>to</span>
-                                                        <Input
-                                                            type="time"
-                                                            className="w-32"
+                                                            onValueChange={(val) => updateSlot(day.dayOfWeek, index, 'startTime', val)}
+                                                        >
+                                                            <SelectTrigger className="w-32">
+                                                                <SelectValue placeholder="Début" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="max-h-[300px]">
+                                                                {timeSlots.map(time => (
+                                                                    <SelectItem key={time} value={time}>{time}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <span>à</span>
+                                                        <Select
                                                             value={slot.endTime}
-                                                            onChange={(e) => updateSlot(day.dayOfWeek, index, 'endTime', e.target.value)}
-                                                        />
+                                                            onValueChange={(val) => updateSlot(day.dayOfWeek, index, 'endTime', val)}
+                                                        >
+                                                            <SelectTrigger className="w-32">
+                                                                <SelectValue placeholder="Fin" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="max-h-[300px]">
+                                                                {timeSlots.map(time => (
+                                                                    <SelectItem key={time} value={time}>{time}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                     <Select
                                                         value={slot.roomId || ''}
                                                         onValueChange={(val) => updateSlot(day.dayOfWeek, index, 'roomId', val || undefined)}
                                                     >
                                                         <SelectTrigger className="w-[180px]">
-                                                            <SelectValue placeholder="Select room" />
+                                                            <SelectValue placeholder="Choisir une salle" />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {rooms.map(room => (

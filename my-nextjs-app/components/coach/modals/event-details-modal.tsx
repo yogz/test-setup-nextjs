@@ -18,8 +18,17 @@ type CalendarEventDetails = {
     description?: string | null;
     reason?: string | null;
     roomId?: string;
+    room?: { id: string; name: string } | null;
+    member?: { id: string; name: string } | null;
     block?: { reason?: string | null };
-    session?: { capacity?: number | null; bookings?: any[]; description?: string | null; roomId?: string };
+    session?: {
+        capacity?: number | null;
+        bookings?: any[];
+        description?: string | null;
+        roomId?: string;
+        room?: { id: string; name: string } | null;
+        member?: { id: string; name: string } | null;
+    };
 };
 
 interface EventDetailsModalProps {
@@ -89,10 +98,10 @@ export function EventDetailsModal({ isOpen, onClose, event }: EventDetailsModalP
                                 {end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>
-                        {(session?.roomId || event.roomId) && (
+                        {(session?.room?.name || event.room?.name) && (
                             <div className="flex items-center gap-2">
                                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span>Salle</span>
+                                <span>{session?.room?.name || event.room?.name}</span>
                             </div>
                         )}
 
@@ -102,7 +111,7 @@ export function EventDetailsModal({ isOpen, onClose, event }: EventDetailsModalP
                                 <span>
                                     {isGroup
                                         ? `${bookingCount} / ${capacity || 0} participants`
-                                        : (session?.bookings?.[0]?.member?.name || 'Membre')}
+                                        : (session?.member?.name || session?.bookings?.[0]?.member?.name || event.member?.name || 'Membre')}
                                 </span>
                             </div>
                         )}

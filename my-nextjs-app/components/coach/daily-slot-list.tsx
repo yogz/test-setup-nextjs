@@ -31,6 +31,15 @@ interface BlockedSlot {
     reason: string | null;
 }
 
+interface AvailabilityAddition {
+    id: string;
+    startTime: Date;
+    endTime: Date;
+    isIndividual: boolean;
+    isGroup: boolean;
+    roomId?: string;
+}
+
 interface Session {
     id: string;
     title: string | null;
@@ -47,13 +56,14 @@ interface Session {
 interface DailySlotListProps {
     weeklyAvailability: WeeklyAvailability[];
     blockedSlots: BlockedSlot[];
+    availabilityAdditions?: AvailabilityAddition[];
     sessions: Session[];
     rooms: any[];
     members: any[];
     coachName: string;
 }
 
-type SlotStatus = 'FREE' | 'BLOCKED' | 'BOOKED';
+type SlotStatus = 'FREE' | 'BLOCKED' | 'BOOKED' | 'EXCEPTIONAL';
 
 interface DailySlot {
     time: string;
@@ -64,11 +74,13 @@ interface DailySlot {
     isIndividual: boolean;
     isGroup: boolean;
     roomId?: string;
+    isExceptional?: boolean;
 }
 
 export function DailySlotList({
     weeklyAvailability,
     blockedSlots,
+    availabilityAdditions = [],
     sessions,
     rooms,
     members,
@@ -131,16 +143,16 @@ export function DailySlotList({
     const getSlotsForDay = (date: Date) => {
         const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-        // Find availability for this day
-        // Note: The DB stores 0-6 (Sun-Sat) or 1-7? standard JS is 0-6. 
-        // Let's assume standard JS for now, but check if DB uses 1-7.
-        // Usually date.getDay() returns 0 for Sunday.
-        // If DB uses 1=Monday, 7=Sunday, we might need conversion.
-        // Based on previous files, it seems 0 is Sunday.
-
+        // Find availability for this day (weekly template)
         const dayAvailability = weeklyAvailability.filter(a => a.dayOfWeek === dayOfWeek);
 
-        if (dayAvailability.length === 0) return [];
+        // Find exceptional availability for this specific date
+        const exceptionalAvailability = availabilityAdditions.filter(addition => {
+            const additionDate = startOfDay(new Date(addition.startTime));
+            return isSameDay(additionDate, date);
+        });
+
+        if (dayAvailability.length === 0 && exceptionalAvailability.length === 0) return [];
 
         const slots: DailySlot[] = [];
 
@@ -189,18 +201,59 @@ export function DailySlotList({
             }
         });
 
+        // Add exceptional availability slots
+        exceptionalAvailability.forEach(addition => {
+            const addStart = new Date(addition.startTime);
+            const addEnd = new Date(addition.endTime);
+
+            let currentSlotTime = addStart;
+
+            while (isBefore(currentSlotTime, addEnd)) {
+                const timeStr = format(currentSlotTime, 'HH:mm');
+                const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + 60);
+
+                // Check for sessions
+                const session = sessions.find(s => {
+                    const sStart = new Date(s.startTime);
+                    const sEnd = new Date(s.endTime);
+                    return (sStart < slotEnd && sEnd > currentSlotTime);
+                });
+
+                // Check for blocks
+                const block = blockedSlots.find(b => {
+                    const bStart = new Date(b.startTime);
+                    const bEnd = new Date(b.endTime);
+                    return (bStart < slotEnd && bEnd > currentSlotTime);
+                });
+
+                let status: SlotStatus = 'EXCEPTIONAL';
+                if (session) status = 'BOOKED';
+                else if (block) status = 'BLOCKED';
+
+                slots.push({
+                    time: timeStr,
+                    date: currentSlotTime,
+                    status,
+                    session,
+                    block,
+                    isIndividual: addition.isIndividual,
+                    isGroup: addition.isGroup,
+                    roomId: session?.roomId || addition.roomId,
+                    isExceptional: true
+                });
+
+                currentSlotTime = slotEnd;
+            }
+        });
+
         return slots.sort((a, b) => a.time.localeCompare(b.time));
     };
 
     const handleSlotClick = (slot: DailySlot) => {
-        if (slot.status === 'FREE') {
+        if (slot.status === 'FREE' || slot.status === 'EXCEPTIONAL') {
             setSelectedSlot({ date: slot.date, time: slot.time });
             setIsActionMenuOpen(true);
         } else if (slot.status === 'BOOKED' && slot.session) {
-            // Open event details
-            // We need to adapt the event object to match what EventDetailsModal expects
-            // or just pass the session directly if we modify the modal.
-            // For now, let's try to match the CalendarEvent type roughly
             setSelectedEvent({ session: slot.session });
         } else if (slot.status === 'BLOCKED' && slot.block) {
             setSelectedEvent({ block: slot.block });
@@ -237,6 +290,7 @@ export function DailySlotList({
                                         className={cn(
                                             "group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-0 p-0",
                                             slot.status === 'FREE' && "bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 shadow-sm",
+                                            slot.status === 'EXCEPTIONAL' && "bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 shadow-sm ring-2 ring-amber-200",
                                             slot.status === 'BLOCKED' && "bg-gradient-to-br from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300",
                                             slot.status === 'BOOKED' && "bg-gradient-to-br from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 shadow-sm"
                                         )}
@@ -281,7 +335,7 @@ export function DailySlotList({
                                                 {slot.status === 'BOOKED' && slot.session && (
                                                     <div className="flex flex-col items-center gap-1 w-full">
                                                         <span className="text-xs md:text-sm font-semibold text-violet-700 truncate w-full px-1 text-center">
-                                                            {slot.session.bookings?.[0]?.member?.name || slot.session.title || "Réservé"}
+                                                            {slot.session.member?.name || slot.session.bookings?.[0]?.member?.name || slot.session.title || "Réservé"}
                                                         </span>
                                                         {slot.session.type === 'GROUP' && (
                                                             <Badge variant="secondary" className="text-[10px] md:text-xs bg-violet-200/50 text-violet-700 border-0 px-1.5 py-0">

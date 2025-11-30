@@ -43,7 +43,7 @@ export default async function DashboardLayout({
                     </Link>
                     <Link href="/coach/sessions" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
                         <ClipboardList size={24} className="md:w-5 md:h-5" />
-                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Sessions</span>
+                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Mon Planning</span>
                     </Link>
                     <Link href="/coach/availability-exceptions" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
                         <CalendarPlus size={24} className="md:w-5 md:h-5" />

@@ -319,6 +319,8 @@ export const availabilityAdditions = pgTable('availability_additions', {
   startTime: timestamp('start_time').notNull(),
   endTime: timestamp('end_time').notNull(),
   roomId: text('room_id').references(() => rooms.id),
+  isIndividual: boolean('is_individual').default(true).notNull(),
+  isGroup: boolean('is_group').default(false).notNull(),
   reason: text('reason'), // "Rattrapage", "Demande spéciale"
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

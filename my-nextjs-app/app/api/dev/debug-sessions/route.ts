@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const futureSessions = await db.query.trainingSessions.findMany({
         where: and(
             gte(trainingSessions.startTime, now),
-            eq(trainingSessions.status, 'PLANNED')
+            eq(trainingSessions.status, 'scheduled')
         ),
         with: {
             coach: true,
