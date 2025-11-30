@@ -7,7 +7,9 @@ import {
   integer,
   date,
   pgEnum,
+  jsonb,
 } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -159,6 +161,14 @@ export const trainingSessions = pgTable('training_sessions', {
   capacity: integer('capacity'), // for GROUP; 1 for 1:1
   status: sessionStatusEnum('status').default('PLANNED').notNull(),
   notes: text('notes'), // Coach confirmation notes
+  duration: integer('duration'), // duration in minutes
+  weekdays: jsonb('weekdays').$type<number[]>(), // array of weekday numbers (0=Sunday, 6=Saturday)
+  isRecurring: boolean('is_recurring').default(false),
+  recurrenceEndDate: timestamp('recurrence_end_date'),
+  level: varchar('level', { length: 50 }), // ALL, BEGINNER, INTERMEDIATE, ADVANCED
+  minParticipants: integer('min_participants'),
+  visibility: varchar('visibility', { length: 20 }).default('PUBLIC'), // PUBLIC, PRIVATE
+  material: text('material'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -358,3 +368,118 @@ export type InsertMemberNote = z.infer<typeof insertMemberNoteSchema>;
 
 export type CoachAvailability = z.infer<typeof selectCoachAvailabilitySchema>;
 export type InsertCoachAvailability = z.infer<typeof insertCoachAvailabilitySchema>;
+
+// ============================================================================
+// COACH AVAILABILITY & SETTINGS
+// ============================================================================
+
+export const coachSettings = pgTable('coach_settings', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  defaultRoomId: text('default_room_id').references(() => rooms.id),
+  defaultDuration: integer('default_duration').default(60).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const weeklyAvailability = pgTable('weekly_availability', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 1=Monday, etc.
+  startTime: varchar('start_time', { length: 5 }).notNull(), // "HH:MM"
+  endTime: varchar('end_time', { length: 5 }).notNull(), // "HH:MM"
+  isIndividual: boolean('is_individual').default(false).notNull(),
+  isGroup: boolean('is_group').default(false).notNull(),
+  roomId: text('room_id').references(() => rooms.id), // Optional room assignment
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const blockedSlots = pgTable('blocked_slots', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coachId: text('coach_id')
+    .notNull()
+    .references(() => users.id),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  reason: text('reason'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ============================================================================
+// RELATIONS
+// ============================================================================
+
+export const usersRelations = relations(users, ({ many }) => ({
+  coachSessions: many(trainingSessions),
+  bookings: many(bookings),
+  memberships: many(memberships),
+  coachSettings: many(coachSettings),
+  weeklyAvailability: many(weeklyAvailability),
+  blockedSlots: many(blockedSlots),
+}));
+
+export const trainingSessionsRelations = relations(trainingSessions, ({ one, many }) => ({
+  coach: one(users, {
+    fields: [trainingSessions.coachId],
+    references: [users.id],
+  }),
+  room: one(rooms, {
+    fields: [trainingSessions.roomId],
+    references: [rooms.id],
+  }),
+  bookings: many(bookings),
+}));
+
+export const bookingsRelations = relations(bookings, ({ one }) => ({
+  session: one(trainingSessions, {
+    fields: [bookings.sessionId],
+    references: [trainingSessions.id],
+  }),
+  member: one(users, {
+    fields: [bookings.memberId],
+    references: [users.id],
+  }),
+}));
+
+export const roomsRelations = relations(rooms, ({ many, one }) => ({
+  sessions: many(trainingSessions),
+  location: one(locations, {
+    fields: [rooms.locationId],
+    references: [locations.id],
+  }),
+}));
+
+export const membershipsRelations = relations(memberships, ({ one }) => ({
+  member: one(users, {
+    fields: [memberships.memberId],
+    references: [users.id],
+  }),
+}));
+
+export const coachSettingsRelations = relations(coachSettings, ({ one }) => ({
+  coach: one(users, {
+    fields: [coachSettings.coachId],
+    references: [users.id],
+  }),
+  defaultRoom: one(rooms, {
+    fields: [coachSettings.defaultRoomId],
+    references: [rooms.id],
+  }),
+}));
+
+export const weeklyAvailabilityRelations = relations(weeklyAvailability, ({ one }) => ({
+  coach: one(users, {
+    fields: [weeklyAvailability.coachId],
+    references: [users.id],
+  }),
+}));
+
+export const blockedSlotsRelations = relations(blockedSlots, ({ one }) => ({
+  coach: one(users, {
+    fields: [blockedSlots.coachId],
+    references: [users.id],
+  }),
+}));

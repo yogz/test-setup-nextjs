@@ -116,7 +116,7 @@ export default function UsersPage() {
       const result = await updateUserAction(userId, {
         name: editForm.name,
         dateOfBirth: editForm.dateOfBirth,
-        sex: editForm.sex,
+        sex: editForm.sex as any,
         phone: editForm.phone,
         ...(canEditOthers && editForm.role ? { role: editForm.role } : {}),
       });
@@ -256,11 +256,10 @@ export default function UsersPage() {
                 <CardContent>
                   {saveMessage && editingUserId === user.id && (
                     <Alert
-                      className={`mb-4 ${
-                        saveMessage.type === 'success'
+                      className={`mb-4 ${saveMessage.type === 'success'
                           ? 'bg-green-50 border-green-200'
                           : 'bg-red-50 border-red-200'
-                      }`}
+                        }`}
                     >
                       <AlertDescription
                         className={

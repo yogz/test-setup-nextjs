@@ -9,8 +9,11 @@ import {
     BarChart3,
     LogOut,
     User,
-    Dumbbell
+    Dumbbell,
+    ClipboardList,
+    BookCheck
 } from 'lucide-react';
+import { SignOutButton } from '@/components/ui/sign-out-button';
 
 export default async function DashboardLayout({
     children,
@@ -22,7 +25,7 @@ export default async function DashboardLayout({
     });
 
     if (!session) {
-        redirect('/sign-in');
+        redirect('/');
     }
 
     const role = session.user.role;
@@ -31,22 +34,37 @@ export default async function DashboardLayout({
         <>
             {/* COACH LINKS */}
             {(role === 'coach' || role === 'owner') && (
-                <Link href="/coach/dashboard" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
-                    <LayoutDashboard size={24} className="md:w-5 md:h-5" />
-                    <span className="text-[10px] md:text-sm mt-1 md:mt-0">Coach</span>
-                </Link>
+                <>
+                    <Link href="/coach/dashboard" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                        <LayoutDashboard size={24} className="md:w-5 md:h-5" />
+                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Coach</span>
+                    </Link>
+                    <Link href="/coach/sessions" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                        <ClipboardList size={24} className="md:w-5 md:h-5" />
+                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Sessions</span>
+                    </Link>
+                </>
             )}
 
-            {/* MEMBER LINKS */}
-            <Link href="/schedule" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
-                <CalendarDays size={24} className="md:w-5 md:h-5" />
-                <span className="text-[10px] md:text-sm mt-1 md:mt-0">Schedule</span>
-            </Link>
+            {/* MEMBER LINKS - Only show for non-coach users */}
+            {role === 'member' && (
+                <>
+                    <Link href="/schedule" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                        <CalendarDays size={24} className="md:w-5 md:h-5" />
+                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Schedule</span>
+                    </Link>
 
-            <Link href="/member/stats" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
-                <BarChart3 size={24} className="md:w-5 md:h-5" />
-                <span className="text-[10px] md:text-sm mt-1 md:mt-0">Stats</span>
-            </Link>
+                    <Link href="/bookings" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                        <BookCheck size={24} className="md:w-5 md:h-5" />
+                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Bookings</span>
+                    </Link>
+
+                    <Link href="/member/stats" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                        <BarChart3 size={24} className="md:w-5 md:h-5" />
+                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Stats</span>
+                    </Link>
+                </>
+            )}
         </>
     );
 
@@ -69,7 +87,7 @@ export default async function DashboardLayout({
                 </nav>
 
                 <div className="pt-6 border-t border-slate-800">
-                    <div className="flex items-center gap-3 mb-4 px-2">
+                    <Link href="/dashboard" className="flex items-center gap-3 mb-4 px-2 hover:bg-slate-800 rounded-lg p-2 transition-colors">
                         <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center">
                             <User size={16} />
                         </div>
@@ -77,14 +95,9 @@ export default async function DashboardLayout({
                             <p className="text-sm font-medium truncate">{session.user.name}</p>
                             <p className="text-xs text-slate-400 truncate">{session.user.email}</p>
                         </div>
-                    </div>
-
-                    <Link href="/api/auth/signout">
-                        <Button variant="outline" className="w-full justify-start gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
-                            <LogOut size={18} />
-                            Sign Out
-                        </Button>
                     </Link>
+
+                    <SignOutButton />
                 </div>
             </aside>
 
@@ -109,10 +122,9 @@ export default async function DashboardLayout({
                 {/* MOBILE BOTTOM NAV - Fixed at bottom */}
                 <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-2 pb-safe flex justify-around items-center z-50">
                     <NavItems />
-                    <Link href="/api/auth/signout" className="flex flex-col items-center text-slate-300 hover:text-white p-2 rounded-lg">
-                        <LogOut size={24} />
-                        <span className="text-[10px] mt-1">Sign Out</span>
-                    </Link>
+                    <div className="flex flex-col items-center text-slate-300 hover:text-white p-2 rounded-lg">
+                        <SignOutButton />
+                    </div>
                 </nav>
             </div>
         </div>

@@ -87,6 +87,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     process.env.BETTER_AUTH_URL!,
     'http://localhost:3000', // Required for local development (HTTP)
+    'http://localhost:3005', // Alternative dev port
     'https://localhost:3000', // Required for mobile development (HTTPS)
     'https://appleid.apple.com', // Required for Apple Sign In
   ],

@@ -20,6 +20,10 @@ import { usePermissions } from '@/lib/hooks/usePermissions';
 import { PERMISSIONS } from '@/lib/rbac/permissions';
 import Link from 'next/link';
 
+import { AddCoachModal } from '@/components/owner/add-coach-modal';
+import { AddRoomModal } from '@/components/owner/add-room-modal';
+import { AddLocationModal } from '@/components/owner/add-location-modal';
+
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
@@ -33,6 +37,11 @@ export default function DashboardPage() {
   const [phone, setPhone] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+
+  // Owner Modals state
+  const [isAddCoachOpen, setIsAddCoachOpen] = useState(false);
+  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
+  const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
 
   useEffect(() => {
     // Redirect to home if not authenticated
@@ -129,6 +138,8 @@ export default function DashboardPage() {
     return null;
   }
 
+  const isOwner = (session.user as any).role === 'owner';
+
   return (
     <main className="flex min-h-screen flex-col p-4 sm:p-6 md:p-8 bg-gray-50">
       <div className="w-full max-w-6xl mx-auto">
@@ -145,6 +156,36 @@ export default function DashboardPage() {
             Sign Out
           </Button>
         </header>
+
+        {/* Owner Administration Section */}
+        {isOwner && (
+          <Card className="mb-6 sm:mb-8 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="text-xl sm:text-2xl text-blue-800">Administration</CardTitle>
+              <CardDescription className="text-blue-600">Gérez votre salle de sport</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-4">
+                <Button onClick={() => setIsAddLocationOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                  Ajouter une Localisation
+                </Button>
+                <Button onClick={() => setIsAddCoachOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                  Ajouter un Coach
+                </Button>
+                <Button onClick={() => setIsAddRoomOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                  Ajouter une Salle
+                </Button>
+              </div>
+              <div className="pt-2">
+                <Link href="/owner/admin">
+                  <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+                    Voir toutes les localisations et salles →
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Profile Section */}
         <Card className="mb-6 sm:mb-8">
@@ -163,166 +204,166 @@ export default function DashboardPage() {
           </CardHeader>
 
           <CardContent>
-          {saveMessage && (
-            <Alert className={`mb-4 ${saveMessage.includes('success') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-              <AlertDescription className={saveMessage.includes('success') ? 'text-green-800' : 'text-red-800'}>
-                {saveMessage}
-              </AlertDescription>
-            </Alert>
-          )}
+            {saveMessage && (
+              <Alert className={`mb-4 ${saveMessage.includes('success') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <AlertDescription className={saveMessage.includes('success') ? 'text-green-800' : 'text-red-800'}>
+                  {saveMessage}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {!isEditing ? (
-            <div className="flex flex-col md:flex-row gap-8">
-              {/* Profile Picture */}
-              <div className="flex flex-col items-center md:items-start">
-                <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 mb-4">
-                  {session.user.image ? (
-                    <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl font-bold">
-                      {session.user.name?.[0]?.toUpperCase() || session.user.email[0].toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* User Information Display */}
-              <div className="space-y-4 flex-1">
-                <div>
-                  <Label className="text-gray-500">Name</Label>
-                  <p className="text-lg mt-1">{session.user.name || 'Not set'}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-500">Email</Label>
-                  <p className="text-lg mt-1">{session.user.email}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-500">Date of Birth</Label>
-                  <p className="text-lg mt-1">{(session.user as any).dateOfBirth || 'Not set'}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-500">Sex</Label>
-                  <p className="text-lg mt-1">{(session.user as any).sex || 'Not set'}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-500">Phone</Label>
-                  <p className="text-lg mt-1">{(session.user as any).phone || 'Not set'}</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSaveProfile}>
+            {!isEditing ? (
               <div className="flex flex-col md:flex-row gap-8">
-                {/* Profile Picture Display (non-editable) */}
+                {/* Profile Picture */}
                 <div className="flex flex-col items-center md:items-start">
                   <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 mb-4">
                     {session.user.image ? (
                       <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl font-bold">
-                        {name?.[0]?.toUpperCase() || session.user.email[0].toUpperCase()}
+                        {session.user.name?.[0]?.toUpperCase() || session.user.email[0].toUpperCase()}
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Edit Form */}
+                {/* User Information Display */}
                 <div className="space-y-4 flex-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="dashboard-name">Name</Label>
-                    <Input
-                      id="dashboard-name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter your name"
-                    />
+                  <div>
+                    <Label className="text-gray-500">Name</Label>
+                    <p className="text-lg mt-1">{session.user.name || 'Not set'}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dashboard-dob">Date of Birth</Label>
-                    <Input
-                      id="dashboard-dob"
-                      type="date"
-                      value={dateOfBirth}
-                      onChange={(e) => setDateOfBirth(e.target.value)}
-                    />
+                  <div>
+                    <Label className="text-gray-500">Email</Label>
+                    <p className="text-lg mt-1">{session.user.email}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dashboard-sex">Sex</Label>
-                    <Select
-                      value={sex}
-                      onValueChange={(value) => setSex(value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="non-binary">Non-binary</SelectItem>
-                        <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div>
+                    <Label className="text-gray-500">Date of Birth</Label>
+                    <p className="text-lg mt-1">{(session.user as any).dateOfBirth || 'Not set'}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dashboard-phone">Phone</Label>
-                    <Input
-                      id="dashboard-phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => {
-                        const value = e.target.value;
-
-                        // Allow user to enter any format, just ensure it starts with +
-                        if (value.length === 0) {
-                          setPhone('');
-                        } else if (value.startsWith('+')) {
-                          // User is entering international format, allow it as-is
-                          setPhone(value);
-                        } else if (value.startsWith('0') && value.replace(/\D/g, '').length <= 10) {
-                          // French format starting with 0, auto-convert to +33
-                          const digits = value.replace(/\D/g, '');
-                          if (digits.startsWith('0')) {
-                            const formatted = '+33 ' + digits.substring(1);
-                            setPhone(formatted);
-                          } else {
-                            setPhone(value);
-                          }
-                        } else if (!value.includes('+')) {
-                          // No + sign, add it
-                          setPhone('+' + value);
-                        } else {
-                          setPhone(value);
-                        }
-                      }}
-                      placeholder="+33 6 12 34 56 78"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">International format (e.g., +33 6 12 34 56 78, +1 555 123 4567)</p>
+                  <div>
+                    <Label className="text-gray-500">Sex</Label>
+                    <p className="text-lg mt-1">{(session.user as any).sex || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-500">Phone</Label>
+                    <p className="text-lg mt-1">{(session.user as any).phone || 'Not set'}</p>
                   </div>
                 </div>
               </div>
+            ) : (
+              <form onSubmit={handleSaveProfile}>
+                <div className="flex flex-col md:flex-row gap-8">
+                  {/* Profile Picture Display (non-editable) */}
+                  <div className="flex flex-col items-center md:items-start">
+                    <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 mb-4">
+                      {session.user.image ? (
+                        <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl font-bold">
+                          {name?.[0]?.toUpperCase() || session.user.email[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:justify-end">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleCancelEdit}
-                  disabled={isSaving}
-                  className="order-2 sm:order-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSaving}
-                  className="order-1 sm:order-2"
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-          )}
+                  {/* Edit Form */}
+                  <div className="space-y-4 flex-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="dashboard-name">Name</Label>
+                      <Input
+                        id="dashboard-name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Enter your name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dashboard-dob">Date of Birth</Label>
+                      <Input
+                        id="dashboard-dob"
+                        type="date"
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dashboard-sex">Sex</Label>
+                      <Select
+                        value={sex}
+                        onValueChange={(value) => setSex(value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="non-binary">Non-binary</SelectItem>
+                          <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dashboard-phone">Phone</Label>
+                      <Input
+                        id="dashboard-phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          // Allow user to enter any format, just ensure it starts with +
+                          if (value.length === 0) {
+                            setPhone('');
+                          } else if (value.startsWith('+')) {
+                            // User is entering international format, allow it as-is
+                            setPhone(value);
+                          } else if (value.startsWith('0') && value.replace(/\D/g, '').length <= 10) {
+                            // French format starting with 0, auto-convert to +33
+                            const digits = value.replace(/\D/g, '');
+                            if (digits.startsWith('0')) {
+                              const formatted = '+33 ' + digits.substring(1);
+                              setPhone(formatted);
+                            } else {
+                              setPhone(value);
+                            }
+                          } else if (!value.includes('+')) {
+                            // No + sign, add it
+                            setPhone('+' + value);
+                          } else {
+                            setPhone(value);
+                          }
+                        }}
+                        placeholder="+33 6 12 34 56 78"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">International format (e.g., +33 6 12 34 56 78, +1 555 123 4567)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    className="order-2 sm:order-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSaving}
+                    className="order-1 sm:order-2"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
 
@@ -394,6 +435,11 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modals */}
+      <AddLocationModal isOpen={isAddLocationOpen} onClose={() => setIsAddLocationOpen(false)} />
+      <AddCoachModal isOpen={isAddCoachOpen} onClose={() => setIsAddCoachOpen(false)} />
+      <AddRoomModal isOpen={isAddRoomOpen} onClose={() => setIsAddRoomOpen(false)} />
     </main>
   );
 }

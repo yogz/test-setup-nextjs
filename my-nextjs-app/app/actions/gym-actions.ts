@@ -9,22 +9,26 @@ import {
 import { PERMISSIONS } from '@/lib/rbac/permissions';
 import {
     createBookingSchema,
+    createRecurringBookingSchema,
     cancelBookingSchema,
     confirmSessionSchema,
     addSessionCommentSchema,
     updateAvailabilitySchema,
     createTrainingSessionSchema,
+    bookAvailableSlotSchema,
     CreateBookingInput,
+    CreateRecurringBookingInput,
     CancelBookingInput,
     ConfirmSessionInput,
     AddSessionCommentInput,
     UpdateAvailabilityInput,
     CreateTrainingSessionInput,
+    BookAvailableSlotInput,
 } from '@/lib/validations/gym';
 import { validateData } from '@/lib/validations';
 import { db } from '@/lib/db';
-import { bookings, trainingSessions, memberNotes, coachAvailabilities } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { bookings, trainingSessions, memberNotes, coachAvailabilities, users, blockedSlots } from '@/lib/db/schema';
+import { eq, and, sql, asc, gte, lte } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -130,6 +134,105 @@ export async function createBookingAction(data: CreateBookingInput) {
     }
 }
 
+export async function createRecurringBookingAction(data: CreateRecurringBookingInput) {
+    try {
+        const user = await requireUserWithPermission(PERMISSIONS.bookings.create);
+
+        const validation = validateData(createRecurringBookingSchema, data);
+        if (!validation.success) {
+            return { success: false, error: 'Validation failed', validationErrors: validation.errors };
+        }
+
+        const { sessionId, numberOfOccurrences = 4, memberId } = validation.data;
+        const targetMemberId = memberId || user.id;
+
+        // 1. Check if session exists and is recurring
+        const session = await db.query.trainingSessions.findFirst({
+            where: eq(trainingSessions.id, sessionId),
+        });
+
+        if (!session) {
+            return { success: false, error: 'Session not found' };
+        }
+
+        if (!session.isRecurring) {
+            return { success: false, error: 'This is not a recurring session' };
+        }
+
+        // 2. Find all future occurrences of this recurring session
+        // Sessions with same coach, room, time, and recurring flag
+        const dayOfWeek = session.startTime.getDay();
+        const startHour = session.startTime.getHours();
+        const startMinute = session.startTime.getMinutes();
+
+        const futureSessions = await db.query.trainingSessions.findMany({
+            where: and(
+                eq(trainingSessions.coachId, session.coachId),
+                eq(trainingSessions.roomId, session.roomId),
+                eq(trainingSessions.isRecurring, true),
+                eq(trainingSessions.status, 'PLANNED'),
+                gte(trainingSessions.startTime, new Date())
+            ),
+            orderBy: [asc(trainingSessions.startTime)],
+            limit: numberOfOccurrences,
+            with: {
+                bookings: true
+            }
+        });
+
+        // Filter to same day/time
+        const matchingSessions = futureSessions.filter(s => {
+            const sessionDay = s.startTime.getDay();
+            const sessionHour = s.startTime.getHours();
+            const sessionMinute = s.startTime.getMinutes();
+            return sessionDay === dayOfWeek && sessionHour === startHour && sessionMinute === startMinute;
+        }).slice(0, numberOfOccurrences);
+
+        if (matchingSessions.length === 0) {
+            return { success: false, error: 'No future occurrences found' };
+        }
+
+        // 3. Book each session
+        const results = [];
+        for (const futureSession of matchingSessions) {
+            // Check capacity
+            const bookingCount = futureSession.bookings.filter(b => b.status === 'CONFIRMED').length;
+            if (futureSession.capacity && bookingCount >= futureSession.capacity) {
+                results.push({ sessionId: futureSession.id, status: 'full' });
+                continue;
+            }
+
+            // Check if already booked
+            const alreadyBooked = futureSession.bookings.some(
+                b => b.memberId === targetMemberId && b.status === 'CONFIRMED'
+            );
+            if (alreadyBooked) {
+                results.push({ sessionId: futureSession.id, status: 'already_booked' });
+                continue;
+            }
+
+            // Create booking
+            await db.insert(bookings).values({
+                sessionId: futureSession.id,
+                memberId: targetMemberId,
+                status: 'CONFIRMED',
+            });
+
+            results.push({ sessionId: futureSession.id, status: 'booked' });
+        }
+
+        revalidatePath('/schedule');
+        const bookedCount = results.filter(r => r.status === 'booked').length;
+        return {
+            success: true,
+            message: `${bookedCount} session(s) booked successfully`,
+            details: results
+        };
+    } catch (error) {
+        return handleActionError(error);
+    }
+}
+
 export async function cancelBookingAction(data: CancelBookingInput) {
     try {
         const user = await requireUserWithPermission(PERMISSIONS.bookings.cancelOwn);
@@ -161,6 +264,113 @@ export async function cancelBookingAction(data: CancelBookingInput) {
 
         revalidatePath('/schedule');
         return { success: true, message: 'Booking cancelled' };
+    } catch (error) {
+        return handleActionError(error);
+    }
+}
+
+export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
+    try {
+        const user = await requireUserWithPermission(PERMISSIONS.bookings.create);
+
+        const validation = validateData(bookAvailableSlotSchema, data);
+        if (!validation.success) {
+            return { success: false, error: 'Validation failed', validationErrors: validation.errors };
+        }
+
+        const { coachId, startTime, endTime, memberId } = validation.data;
+        const targetMemberId = memberId || user.id;
+
+        // 1. Verify coach exists and get their default room
+        const coach = await db.query.users.findFirst({
+            where: eq(users.id, coachId),
+            with: {
+                coachSettings: true,
+                weeklyAvailability: true,
+            },
+        });
+
+        if (!coach || (coach.role !== 'coach' && coach.role !== 'owner')) {
+            return { success: false, error: 'Coach not found' };
+        }
+
+        const roomId = coach.coachSettings?.[0]?.defaultRoomId;
+        if (!roomId) {
+            return { success: false, error: 'Coach has no default room configured' };
+        }
+
+        // 2. Verify the time slot is within coach's weekly availability
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const dayOfWeek = start.getDay();
+        const slotStartTime = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`;
+
+        const isInAvailability = coach.weeklyAvailability.some(avail => {
+            if (avail.dayOfWeek !== dayOfWeek || !avail.isIndividual) {
+                return false;
+            }
+            return slotStartTime >= avail.startTime && slotStartTime < avail.endTime;
+        });
+
+        if (!isInAvailability) {
+            return { success: false, error: 'This time slot is not available for booking' };
+        }
+
+        // 3. Check if slot is blocked
+        const blocked = await db.query.blockedSlots.findFirst({
+            where: and(
+                eq(blockedSlots.coachId, coachId),
+                lte(blockedSlots.startTime, start),
+                gte(blockedSlots.endTime, start)
+            ),
+        });
+
+        if (blocked) {
+            return { success: false, error: 'This slot is blocked' };
+        }
+
+        // 4. Check if session already exists at this time
+        const existingSession = await db.query.trainingSessions.findFirst({
+            where: and(
+                eq(trainingSessions.coachId, coachId),
+                eq(trainingSessions.startTime, start)
+            ),
+        });
+
+        if (existingSession) {
+            return { success: false, error: 'A session already exists at this time' };
+        }
+
+        // 5. Create session and booking atomically
+        await db.transaction(async (tx) => {
+            // Create the training session
+            const [newSession] = await tx
+                .insert(trainingSessions)
+                .values({
+                    coachId,
+                    roomId,
+                    title: 'Session individuelle',
+                    description: null,
+                    startTime: start,
+                    endTime: end,
+                    capacity: 1,
+                    type: 'ONE_TO_ONE',
+                    status: 'PLANNED',
+                    isRecurring: false,
+                })
+                .returning();
+
+            // Create the booking
+            await tx.insert(bookings).values({
+                sessionId: newSession.id,
+                memberId: targetMemberId,
+                status: 'CONFIRMED',
+            });
+        });
+
+        revalidatePath('/schedule');
+        revalidatePath('/bookings');
+        return { success: true, message: 'Session booked successfully' };
     } catch (error) {
         return handleActionError(error);
     }
@@ -251,6 +461,50 @@ export async function updateAvailabilityAction(data: UpdateAvailabilityInput) {
 
         revalidatePath('/coach/availability');
         return { success: true, message: 'Availability updated' };
+    } catch (error) {
+        return handleActionError(error);
+    }
+}
+
+export async function getCoachAvailabilitiesAction() {
+    try {
+        const user = await requireUserWithPermission(PERMISSIONS.availability.updateOwn);
+
+        const availabilities = await db.query.coachAvailabilities.findMany({
+            where: eq(coachAvailabilities.coachId, user.id),
+            orderBy: [asc(coachAvailabilities.dayOfWeek), asc(coachAvailabilities.startTime)],
+        });
+
+        return {
+            success: true,
+            data: availabilities,
+        };
+    } catch (error) {
+        return handleActionError(error);
+    }
+}
+
+export async function deleteAvailabilityAction(availabilityId: string) {
+    try {
+        const user = await requireUserWithPermission(PERMISSIONS.availability.updateOwn);
+
+        // Verify ownership
+        const availability = await db.query.coachAvailabilities.findFirst({
+            where: eq(coachAvailabilities.id, availabilityId),
+        });
+
+        if (!availability) {
+            return { success: false, error: 'Availability not found' };
+        }
+
+        if (availability.coachId !== user.id && user.role !== 'owner') {
+            throw new ForbiddenError();
+        }
+
+        await db.delete(coachAvailabilities).where(eq(coachAvailabilities.id, availabilityId));
+
+        revalidatePath('/coach/availability');
+        return { success: true, message: 'Availability deleted' };
     } catch (error) {
         return handleActionError(error);
     }

@@ -16,11 +16,11 @@ export default async function MemberStatsPage() {
 
     const statsResult = await getMemberStatsAction(session.user.id);
 
-    if (!statsResult.success || !statsResult.data) {
+    if (!statsResult.success || !(statsResult as any).data) {
         return <div>Error loading stats</div>;
     }
 
-    const { totalBookings, completedSessions, upcomingSessions } = statsResult.data;
+    const { totalBookings, completedSessions, upcomingSessions } = (statsResult as any).data;
 
     // Calculate attendance rate (completed / (total - upcoming))
     // Avoid division by zero
