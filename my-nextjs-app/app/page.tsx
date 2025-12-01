@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { resetTestData } from '@/app/actions/dev-reset';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -16,6 +17,7 @@ export default function Home() {
   const [magicLinkEmail, setMagicLinkEmail] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +64,26 @@ export default function Home() {
         },
       }
     );
+  };
+
+  const handleResetTestData = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir effacer toutes les réservations, disponibilités et créneaux récurrents ?')) {
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const result = await resetTestData();
+      if (result.success) {
+        alert('✅ Toutes les données de test ont été réinitialisées avec succès !');
+      } else {
+        alert('❌ Erreur : ' + result.message);
+      }
+    } catch (error) {
+      alert('❌ Erreur lors de la réinitialisation des données');
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -120,6 +142,16 @@ export default function Home() {
                     className="w-full justify-start text-xs"
                   >
                     👤 Nicolas
+                  </Button>
+                  <Separator className="my-3" />
+                  <Button
+                    onClick={handleResetTestData}
+                    disabled={isResetting}
+                    variant="destructive"
+                    size="sm"
+                    className="w-full justify-start text-xs"
+                  >
+                    {isResetting ? '⏳ Réinitialisation...' : '🔥 Effacer toutes les données de test'}
                   </Button>
                 </div>
               </div>
