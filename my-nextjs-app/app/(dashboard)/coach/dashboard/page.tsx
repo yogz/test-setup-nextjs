@@ -83,7 +83,7 @@ export default async function CoachDashboardPage() {
                                     <h3 className="font-medium mb-2">Attendees</h3>
                                     {ongoingSession.bookings.length > 0 ? (
                                         <div className="grid gap-2">
-                                            {ongoingSession.bookings.map((booking) => (
+                                            {ongoingSession.bookings.map((booking: any) => (
                                                 <div key={booking.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">

@@ -16,6 +16,7 @@ export type CreateAvailabilityAdditionInput = {
   endTime: Date;
   roomId?: string;
   reason?: string;
+  memberId?: string; // New field
 };
 
 // ============================================================================
@@ -38,11 +39,13 @@ async function getAuthenticatedCoach() {
 // CREATE AVAILABILITY ADDITION
 // ============================================================================
 
+import { trainingSessions, bookings } from '@/lib/db/schema';
+
 export async function createAvailabilityAdditionAction(data: CreateAvailabilityAdditionInput) {
   try {
     const user = await getAuthenticatedCoach();
 
-    const { startTime, endTime, roomId, reason } = data;
+    const { startTime, endTime, roomId, reason, memberId } = data;
 
     // Validate times
     if (new Date(startTime) >= new Date(endTime)) {
@@ -52,6 +55,52 @@ export async function createAvailabilityAdditionAction(data: CreateAvailabilityA
     // Check if in the past
     if (new Date(startTime) < new Date()) {
       return { success: false, error: 'Impossible de créer un créneau dans le passé' };
+    }
+
+    // If memberId is provided, create a Session + Booking instead of AvailabilityAddition
+    if (memberId) {
+      if (!roomId) {
+        return { success: false, error: 'Une salle est requise pour créer une séance' };
+      }
+
+      await db.transaction(async (tx) => {
+        // 1. Create Availability Addition (so it appears in the list and planning)
+        await tx.insert(availabilityAdditions).values({
+          coachId: user.id,
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+          roomId: roomId,
+          reason: reason || 'Séance exceptionnelle',
+        });
+
+        // 2. Create Session
+        const [session] = await tx.insert(trainingSessions).values({
+          coachId: user.id,
+          roomId: roomId,
+          title: reason || 'Séance exceptionnelle',
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+          type: 'ONE_TO_ONE',
+          status: 'scheduled',
+          capacity: 1,
+          isRecurring: false,
+        }).returning();
+
+        // 3. Create Booking
+        await tx.insert(bookings).values({
+          sessionId: session.id,
+          memberId: memberId,
+          status: 'CONFIRMED',
+        });
+      });
+
+      revalidatePath('/coach/sessions');
+      revalidatePath('/coach/availability-exceptions');
+
+      return {
+        success: true,
+        message: 'Séance créée et réservée avec succès',
+      };
     }
 
     // Create the availability addition
@@ -64,7 +113,7 @@ export async function createAvailabilityAdditionAction(data: CreateAvailabilityA
     }).returning();
 
     revalidatePath('/coach/sessions');
-    revalidatePath('/coach/availability');
+    revalidatePath('/coach/availability-exceptions');
 
     return {
       success: true,

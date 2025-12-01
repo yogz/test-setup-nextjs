@@ -31,7 +31,7 @@ export default async function SchedulePage() {
             coach: true,
             room: true,
             bookings: {
-                where: (bookings, { eq, or }) =>
+                where: (bookings: any, { eq, or }: any) =>
                     or(
                         eq(bookings.status, 'CONFIRMED'),
                         eq(bookings.memberId, session.user.id)
@@ -60,8 +60,8 @@ export default async function SchedulePage() {
         coaches: coaches.map(coach => ({
             id: coach.id,
             name: coach.name,
-            weeklyAvailability: coach.weeklyAvailability,
-            blockedSlots: coach.blockedSlots,
+            weeklyAvailability: coach.weeklyAvailability as any,
+            blockedSlots: coach.blockedSlots as any,
         })),
         existingSessions: existingSessions.map(s => ({
             id: s.id,
@@ -86,7 +86,7 @@ export default async function SchedulePage() {
             </div>
 
             <MemberCalendar
-                sessions={existingSessions}
+                sessions={existingSessions as any}
                 availableSlots={availableSlots}
                 userId={session.user.id}
             />

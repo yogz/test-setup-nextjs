@@ -102,6 +102,7 @@ export async function generateSessionsFromTemplateAction(weeksAhead: number = 4)
                 status: 'scheduled',
                 roomId: slot.roomId || validRoomId, // Use slot's room or default room
                 capacity: 1,
+                isRecurring: true, // Mark as recurring since generated from weekly template
                 createdAt: new Date(),
             });
             createdCount++;

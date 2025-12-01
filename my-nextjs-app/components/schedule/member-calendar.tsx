@@ -44,13 +44,13 @@ type CalendarEvent = {
 
 const calendarFormats: Formats = {
     dayHeaderFormat: (date, culture, localizer) =>
-        localizer.format(date, 'EEEE d MMM', culture),
+        localizer?.format(date, 'EEEE d MMM', culture) ?? '',
     dayRangeHeaderFormat: ({ start, end }, culture, localizer) =>
-        `${localizer.format(start, 'd MMM', culture)} – ${localizer.format(end, 'd MMM yyyy', culture)}`,
+        `${localizer?.format(start, 'd MMM', culture) ?? ''} – ${localizer?.format(end, 'd MMM yyyy', culture) ?? ''}`,
     eventTimeRangeFormat: ({ start, end }, culture, localizer) =>
-        `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`,
+        `${localizer?.format(start, 'HH:mm', culture) ?? ''} - ${localizer?.format(end, 'HH:mm', culture) ?? ''}`,
     timeGutterFormat: (date, culture, localizer) =>
-        localizer.format(date, 'HH:mm', culture),
+        localizer?.format(date, 'HH:mm', culture) ?? '',
 };
 
 const calendarMessages: Messages = {
@@ -149,7 +149,7 @@ export function MemberCalendar({ sessions, availableSlots, userId }: MemberCalen
                     endTime: slot.endTime.toISOString(),
                 });
                 if (!result.success) {
-                    alert(result.error);
+                    alert('error' in result ? result.error : 'Une erreur est survenue');
                     return;
                 }
             } else if (selectedEvent.session) {

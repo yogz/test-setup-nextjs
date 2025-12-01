@@ -45,7 +45,7 @@ export default async function AdminSessionsPage() {
             </div>
 
             <AdminSessionsTable
-                sessions={allSessions}
+                sessions={allSessions as any}
                 availability={allAvailability}
             />
         </div>

@@ -177,14 +177,14 @@ export async function cancelRecurringBookingAction(data: CancelRecurringBookingI
     const now = new Date();
     const sessionsToCancel = futureOnly
       ? and(
-          eq(trainingSessions.recurringBookingId, recurringBookingId),
-          gte(trainingSessions.startTime, now),
-          eq(trainingSessions.status, 'scheduled')
-        )
+        eq(trainingSessions.recurringBookingId, recurringBookingId),
+        gte(trainingSessions.startTime, now),
+        eq(trainingSessions.status, 'scheduled')
+      )
       : and(
-          eq(trainingSessions.recurringBookingId, recurringBookingId),
-          eq(trainingSessions.status, 'scheduled')
-        );
+        eq(trainingSessions.recurringBookingId, recurringBookingId),
+        eq(trainingSessions.status, 'scheduled')
+      );
 
     await db.update(trainingSessions)
       .set({ status: 'cancelled' })
@@ -270,7 +270,7 @@ export async function generateSessionsForRecurringBooking(
       : horizon;
 
     // 3. Get coach's default room
-    const roomId = booking.coach.coachSettings?.[0]?.defaultRoomId;
+    const roomId = (booking.coach as any).coachSettings?.[0]?.defaultRoomId;
     if (!roomId) {
       return { success: false, error: 'Coach has no default room configured' };
     }
@@ -312,7 +312,7 @@ export async function generateSessionsForRecurringBooking(
         }
 
         // Check if slot is blocked
-        const isBlocked = booking.coach.blockedSlots.some(block =>
+        const isBlocked = (booking.coach as any).blockedSlots.some((block: any) =>
           block.startTime <= sessionStart && block.endTime > sessionStart
         );
 

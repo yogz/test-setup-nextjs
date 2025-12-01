@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { createSessionFromFormAction } from '@/app/actions/coach-form-actions';
 
 interface Member {
@@ -40,13 +41,16 @@ export function BookMemberModal({
     defaultDuration = 60,
     defaultRoomId
 }: BookMemberModalProps) {
+    const [bookingType, setBookingType] = useState<'member' | 'trial'>('member');
     const [memberId, setMemberId] = useState('');
+    const [prospectName, setProspectName] = useState('');
     const [date, setDate] = useState('');
     const [time, setTime] = useState('10:00');
     const [duration, setDuration] = useState('60');
     const [roomId, setRoomId] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
     const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+    const [frequency, setFrequency] = useState('1');
     const [notes, setNotes] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -56,27 +60,44 @@ export function BookMemberModal({
             const dateObj = initialDate || new Date();
             setDate(dateObj.toISOString().split('T')[0]);
             setTime(dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+            setBookingType('member');
             setMemberId('');
+            setProspectName('');
             setDuration(defaultDuration.toString());
             setRoomId(defaultRoomId || rooms[0]?.id || '');
             setIsRecurring(false);
             setRecurrenceEndDate('');
+            setFrequency('1');
             setNotes('');
         }
     }, [isOpen, initialDate, defaultDuration, defaultRoomId, rooms]);
 
     const handleSubmit = async () => {
-        if (!memberId) {
+        if (bookingType === 'member' && !memberId) {
             alert('Veuillez sélectionner un membre');
+            return;
+        }
+
+        if (bookingType === 'trial' && !prospectName) {
+            alert('Veuillez entrer le nom du prospect');
             return;
         }
 
         setIsLoading(true);
         try {
             const formData = new FormData();
-            const memberName = members.find(m => m.id === memberId)?.name || 'Membre';
 
-            formData.append('title', memberName || 'Session individuelle');
+            let title = 'Session individuelle';
+            if (bookingType === 'member') {
+                const memberName = members.find(m => m.id === memberId)?.name || 'Membre';
+                title = memberName;
+                formData.append('memberId', memberId);
+            } else {
+                title = `${prospectName} (Essai)`;
+                // No memberId for trial
+            }
+
+            formData.append('title', title);
             formData.append('type', 'ONE_TO_ONE');
             formData.append('duration', duration);
             formData.append('sessionDate', date);
@@ -84,22 +105,12 @@ export function BookMemberModal({
             formData.append('roomId', roomId);
             formData.append('description', notes);
 
-            // TODO: We might need to actually BOOK the member immediately, not just create the session
-            // But for now, creating the session is the first step.
-            // Ideally, we should also create a booking record.
-            // The current createSessionFromFormAction only creates the session.
-            // We might need a new action `createBookedSession` or update the existing one to handle memberId.
-            // For this MVP, let's create the session and maybe we can add the member booking logic later 
-            // or assume the coach will book it manually? 
-            // No, "Réserver pour un membre" implies the booking is made.
-
-            // Let's stick to creating the session for now as per the prompt's UI requirements,
-            // but realistically we need to link the member.
-            // I'll add a TODO comment here.
-
             if (isRecurring) {
                 formData.append('isRecurring', 'true');
-                formData.append('recurrenceEndDate', recurrenceEndDate);
+                if (recurrenceEndDate) {
+                    formData.append('recurrenceEndDate', recurrenceEndDate);
+                }
+                formData.append('frequency', frequency);
                 const dayOfWeek = new Date(date).getDay();
                 formData.append('weekdays', JSON.stringify([dayOfWeek]));
             } else {
@@ -118,25 +129,59 @@ export function BookMemberModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Réserver pour un membre</DialogTitle>
+                    <DialogTitle>Nouvelle Réservation</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    {/* Booking Type */}
+                    <div className="space-y-3">
+                        <Label>Type de réservation</Label>
+                        <RadioGroup
+                            defaultValue="member"
+                            value={bookingType}
+                            onValueChange={(v) => setBookingType(v as 'member' | 'trial')}
+                            className="flex space-x-4"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="member" id="r-member" />
+                                <Label htmlFor="r-member" className="cursor-pointer font-normal">Membre existant</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="trial" id="r-trial" />
+                                <Label htmlFor="r-trial" className="cursor-pointer font-normal">Cours d'essai</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+
+                    {/* Member Selection or Prospect Name */}
                     <div className="space-y-2">
-                        <Label>Membre *</Label>
-                        <Select value={memberId} onValueChange={setMemberId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Rechercher un membre..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {members.map(member => (
-                                    <SelectItem key={member.id} value={member.id}>
-                                        {member.name || member.email}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {bookingType === 'member' ? (
+                            <>
+                                <Label>Membre *</Label>
+                                <Select value={memberId} onValueChange={setMemberId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Rechercher un membre..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {members.map(member => (
+                                            <SelectItem key={member.id} value={member.id}>
+                                                {member.name || member.email}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </>
+                        ) : (
+                            <>
+                                <Label>Nom du prospect *</Label>
+                                <Input
+                                    value={prospectName}
+                                    onChange={(e) => setProspectName(e.target.value)}
+                                    placeholder="Ex: Jean Dupont"
+                                />
+                            </>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -170,15 +215,36 @@ export function BookMemberModal({
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 pt-2">
                         <Switch checked={isRecurring} onCheckedChange={setIsRecurring} id="repeat" />
-                        <Label htmlFor="repeat">Répéter chaque semaine</Label>
+                        <Label htmlFor="repeat" className="cursor-pointer">Répéter ce créneau</Label>
                     </div>
 
                     {isRecurring && (
-                        <div className="space-y-2">
-                            <Label>Date de fin</Label>
-                            <Input type="date" value={recurrenceEndDate} onChange={(e) => setRecurrenceEndDate(e.target.value)} />
+                        <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="space-y-2">
+                                <Label>Fréquence</Label>
+                                <Select value={frequency} onValueChange={setFrequency}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">Toutes les semaines</SelectItem>
+                                        <SelectItem value="2">Toutes les 2 semaines</SelectItem>
+                                        <SelectItem value="3">Toutes les 3 semaines</SelectItem>
+                                        <SelectItem value="4">Toutes les 4 semaines</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Date de fin (optionnel)</Label>
+                                <Input
+                                    type="date"
+                                    value={recurrenceEndDate}
+                                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                                    min={date}
+                                />
+                            </div>
                         </div>
                     )}
 
@@ -188,6 +254,7 @@ export function BookMemberModal({
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Notes pour cette réservation..."
+                            rows={2}
                         />
                     </div>
                 </div>

@@ -38,14 +38,22 @@ export async function createSessionFromFormAction(formData: FormData) {
     const capacityStr = formData.get('capacity') as string;
     const capacity = type === 'GROUP' && capacityStr ? parseInt(capacityStr) : 1;
     const duration = parseInt(formData.get('duration') as string);
-    const weekdays = JSON.parse(formData.get('weekdays') as string) as number[];
+    const weekdaysStr = formData.get('weekdays') as string;
+    const weekdays = weekdaysStr ? JSON.parse(weekdaysStr) as number[] : [];
     const isRecurring = formData.get('isRecurring') === 'true';
     const description = formData.get('description') as string || undefined;
+    const memberId = formData.get('memberId') as string || undefined;
+    const roomId = formData.get('roomId') as string;
+    const frequency = parseInt(formData.get('frequency') as string) || 1;
 
-    // Get first room from database (temporary solution)
-    const room = await db.query.rooms.findFirst();
-    if (!room) {
-        throw new Error('No room available. Please create a room first.');
+    // Use provided room or fallback to default/first room
+    let finalRoomId = roomId;
+    if (!finalRoomId) {
+        const room = await db.query.rooms.findFirst();
+        if (!room) {
+            throw new Error('No room available. Please create a room first.');
+        }
+        finalRoomId = room.id;
     }
 
     if (isRecurring) {
@@ -55,29 +63,70 @@ export async function createSessionFromFormAction(formData: FormData) {
         }
 
         // Recurring session logic
-        const startDate = new Date(formData.get('startDate') as string);
-        const endDate = new Date(formData.get('recurrenceEndDate') as string);
+        const startDateStr = formData.get('startDate') as string;
+        // If no start date provided (e.g. from BookMemberModal which might use sessionDate), use that
+        const startDateInput = startDateStr || formData.get('sessionDate') as string;
 
-        // Get time from first occurrence (use current time as default or make it configurable)
-        const defaultHour = 9;
-        const defaultMinute = 0;
+        if (!startDateInput) {
+            throw new Error('Start date is required');
+        }
+
+        const startDate = new Date(startDateInput);
+
+        // Handle optional end date
+        let endDate: Date;
+        const endDateStr = formData.get('recurrenceEndDate') as string;
+        if (endDateStr) {
+            endDate = new Date(endDateStr);
+        } else {
+            // Default to 3 months if not provided
+            endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 3);
+        }
+
+        // Get time from form
+        const timeStr = formData.get('sessionTime') as string || '09:00';
+        const [defaultHour, defaultMinute] = timeStr.split(':').map(Number);
 
         // Create sessions for each selected weekday between start and end dates
-        const sessionsToCreate = [];
+        const sessionsToCreate: any[] = [];
         const currentDate = new Date(startDate);
 
-        while (currentDate <= endDate) {
-            // Check if current day is in selected weekdays
-            if (weekdays.includes(currentDate.getDay())) {
-                const startTime = new Date(currentDate);
-                startTime.setHours(defaultHour, defaultMinute, 0, 0);
+        // Align current date to the first valid weekday if needed, or just start iterating
+        // We iterate day by day. 
+        // For frequency > 1, we need to know "week number" or similar.
+        // Simplest approach: Find the first occurrence for each weekday, then add (7 * frequency) days.
 
+        // Better approach: Iterate through weeks.
+        // 1. Find the start of the week for the start date.
+        // 2. Iterate weeks adding (7 * frequency) days.
+        // 3. In each week, check selected weekdays.
+
+        // Let's stick to a day-by-day iteration but track weeks? No, that's complex with JS dates.
+        // Let's find the first valid occurrence of EACH selected weekday.
+        // Then for each of those, generate future occurrences adding (7 * frequency) days.
+
+        for (const dayOfWeek of weekdays) {
+            let iterDate = new Date(startDate);
+            iterDate.setHours(defaultHour, defaultMinute, 0, 0);
+
+            // Find first occurrence of this dayOfWeek on or after startDate
+            while (iterDate.getDay() !== dayOfWeek) {
+                iterDate.setDate(iterDate.getDate() + 1);
+            }
+
+            // If we went past endDate (unlikely if start < end), stop
+            if (iterDate > endDate) continue;
+
+            // Now generate occurrences
+            while (iterDate <= endDate) {
+                const startTime = new Date(iterDate);
                 const endTime = new Date(startTime);
                 endTime.setMinutes(endTime.getMinutes() + duration);
 
                 sessionsToCreate.push({
                     coachId: session.user.id,
-                    roomId: room.id,
+                    roomId: finalRoomId,
                     title,
                     description,
                     type,
@@ -88,17 +137,34 @@ export async function createSessionFromFormAction(formData: FormData) {
                     recurrenceEndDate: endDate,
                     startTime,
                     endTime,
-                    status: 'scheduled' as const,
+                    status: 'scheduled',
+                    frequency,
+                    memberId: memberId || null, // Link member if provided
                 });
-            }
 
-            // Move to next day
-            currentDate.setDate(currentDate.getDate() + 1);
+                // Add frequency * 7 days
+                iterDate.setDate(iterDate.getDate() + (7 * frequency));
+            }
         }
 
         // Insert all sessions at once
         if (sessionsToCreate.length > 0) {
-            await db.insert(trainingSessions).values(sessionsToCreate);
+            // We need to insert them and potentially create bookings if memberId is present
+            // Batch insert sessions first
+            const createdSessions = await db.insert(trainingSessions).values(sessionsToCreate).returning();
+
+            // If memberId is present, create bookings for all these sessions
+            if (memberId) {
+                const bookingsToCreate = createdSessions.map(s => ({
+                    sessionId: s.id,
+                    memberId: memberId,
+                    status: 'CONFIRMED' as const,
+                }));
+
+                // We need to import bookings schema
+                const { bookings } = await import('@/lib/db/schema');
+                await db.insert(bookings).values(bookingsToCreate);
+            }
         } else {
             throw new Error('No sessions created. Make sure the selected days fall within the date range.');
         }
@@ -116,9 +182,9 @@ export async function createSessionFromFormAction(formData: FormData) {
         const endTime = new Date(startTime);
         endTime.setMinutes(endTime.getMinutes() + duration);
 
-        await db.insert(trainingSessions).values({
+        const [createdSession] = await db.insert(trainingSessions).values({
             coachId: session.user.id,
-            roomId: room.id,
+            roomId: finalRoomId,
             title,
             description,
             type,
@@ -129,7 +195,18 @@ export async function createSessionFromFormAction(formData: FormData) {
             startTime,
             endTime,
             status: 'scheduled',
-        });
+            memberId: memberId || null,
+        }).returning();
+
+        // If memberId is present, create booking
+        if (memberId) {
+            const { bookings } = await import('@/lib/db/schema');
+            await db.insert(bookings).values({
+                sessionId: createdSession.id,
+                memberId: memberId,
+                status: 'CONFIRMED',
+            });
+        }
     }
 
     revalidatePath('/coach/sessions');

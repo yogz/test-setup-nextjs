@@ -196,17 +196,15 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
         const results = [];
         for (const futureSession of matchingSessions) {
             // Check capacity
-            const bookingCount = futureSession.bookings.filter(b => b.status === 'CONFIRMED').length;
+            const bookingCount = futureSession.bookings.filter((b: any) => b.status === 'CONFIRMED').length;
             if (futureSession.capacity && bookingCount >= futureSession.capacity) {
                 results.push({ sessionId: futureSession.id, status: 'full' });
                 continue;
             }
 
             // Check if already booked
-            const alreadyBooked = futureSession.bookings.some(
-                b => b.memberId === targetMemberId && b.status === 'CONFIRMED'
-            );
-            if (alreadyBooked) {
+            const existingBooking = futureSession.bookings.find((b: any) => b.memberId === targetMemberId && b.status === 'CONFIRMED');
+            if (existingBooking) {
                 results.push({ sessionId: futureSession.id, status: 'already_booked' });
                 continue;
             }

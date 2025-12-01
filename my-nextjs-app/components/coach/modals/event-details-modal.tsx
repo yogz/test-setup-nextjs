@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar, Clock, MapPin, User, Users } from 'lucide-react';
 import { useState } from 'react';
+import { unblockSlotAction, cancelSessionAction } from '@/app/actions/coach-availability-actions';
+import { useRouter } from 'next/navigation';
 
 type CalendarEventDetails = {
     type?: string;
@@ -20,8 +22,9 @@ type CalendarEventDetails = {
     roomId?: string;
     room?: { id: string; name: string } | null;
     member?: { id: string; name: string } | null;
-    block?: { reason?: string | null };
+    block?: { id?: string; reason?: string | null };
     session?: {
+        id?: string;
         capacity?: number | null;
         bookings?: any[];
         description?: string | null;
@@ -39,6 +42,7 @@ interface EventDetailsModalProps {
 
 export function EventDetailsModal({ isOpen, onClose, event }: EventDetailsModalProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
     if (!event) return null;
 
@@ -55,17 +59,54 @@ export function EventDetailsModal({ isOpen, onClose, event }: EventDetailsModalP
     const capacity = session?.capacity ?? event.capacity ?? 0;
 
     const handleCancel = async () => {
-        if (!confirm('Êtes-vous sûr de vouloir annuler ?')) return;
+        if (isBlocked) {
+            // Débloquer le créneau
+            if (!confirm('Êtes-vous sûr de vouloir débloquer ce créneau ?')) return;
 
-        setIsLoading(true);
-        try {
-            alert('Fonctionnalité à implémenter');
-            onClose();
-        } catch (error) {
-            console.error(error);
-            alert('Erreur lors de l\'annulation');
-        } finally {
-            setIsLoading(false);
+            if (!block?.id) {
+                alert('Impossible de débloquer : ID du créneau manquant');
+                console.error('Block object:', block);
+                return;
+            }
+
+            setIsLoading(true);
+            try {
+                await unblockSlotAction(block.id);
+                alert('Créneau débloqué avec succès');
+                onClose();
+                router.refresh();
+            } catch (error) {
+                console.error('Erreur déblocage:', error);
+                alert('Erreur lors du déblocage du créneau');
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            // Annuler une session
+            if (!confirm('Êtes-vous sûr de vouloir annuler cette session ?')) return;
+
+            console.log('Session object:', session);
+            console.log('Session ID:', session?.id);
+
+            if (!session?.id) {
+                alert('Impossible d\'annuler : ID de la session manquant');
+                console.error('Session object:', session);
+                return;
+            }
+
+            setIsLoading(true);
+            try {
+                console.log('Appel cancelSessionAction avec ID:', session.id);
+                await cancelSessionAction(session.id);
+                alert('Session annulée avec succès');
+                onClose();
+                router.refresh();
+            } catch (error) {
+                console.error('Erreur annulation:', error);
+                alert(`Erreur lors de l'annulation de la session: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -79,12 +120,14 @@ export function EventDetailsModal({ isOpen, onClose, event }: EventDetailsModalP
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">{event.title}</h3>
-                        <Badge variant={isBlocked ? 'destructive' : (isGroup ? 'secondary' : 'default')}>
-                            {isBlocked ? 'Bloqué' : (isGroup ? 'Collectif' : 'Individuel')}
-                        </Badge>
-                    </div>
+                    {(isBlocked || isGroup || event.title) && (
+                        <div className="flex items-center justify-between">
+                            {(isBlocked || isGroup) && <h3 className="text-lg font-semibold">{event.title}</h3>}
+                            <Badge variant={isBlocked ? 'destructive' : (isGroup ? 'secondary' : 'default')} className={!isBlocked && !isGroup ? 'ml-auto' : ''}>
+                                {isBlocked ? 'Bloqué' : (isGroup ? 'Collectif' : 'Individuel')}
+                            </Badge>
+                        </div>
+                    )}
 
                     <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
@@ -116,7 +159,7 @@ export function EventDetailsModal({ isOpen, onClose, event }: EventDetailsModalP
                             </div>
                         )}
 
-                        {(session?.description || event.description) && (
+                        {!isBlocked && isGroup && (session?.description || event.description) && (
                             <div className="mt-4 rounded-md bg-muted p-3">
                                 <p className="text-muted-foreground">{session?.description || event.description}</p>
                             </div>

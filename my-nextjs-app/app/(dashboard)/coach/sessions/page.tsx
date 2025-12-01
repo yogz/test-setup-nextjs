@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { trainingSessions, users, rooms, availabilityAdditions as availabilityAdditionsTable } from '@/lib/db/schema';
-import { eq, desc, and, gte } from 'drizzle-orm';
+import { eq, desc, and, gte, ne } from 'drizzle-orm';
 import { CoachSessionsView } from '@/components/coach/coach-sessions-view';
 import { getCoachSettingsAction, getWeeklyAvailabilityAction, getBlockedSlotsAction } from '@/app/actions/coach-availability-actions';
 
@@ -39,7 +39,8 @@ export default async function CoachSessionsPage() {
         db.query.trainingSessions.findMany({
             where: and(
                 eq(trainingSessions.coachId, session.user.id),
-                gte(trainingSessions.startTime, oneMonthAgo)
+                gte(trainingSessions.startTime, oneMonthAgo),
+                ne(trainingSessions.status, 'cancelled') // Exclure les sessions annulées
             ),
             with: {
                 member: true, // Direct member relation for recurring bookings

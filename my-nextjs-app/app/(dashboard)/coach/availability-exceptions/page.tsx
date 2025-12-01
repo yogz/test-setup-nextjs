@@ -2,10 +2,12 @@ import { auth } from '@/lib/auth/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { availabilityAdditions, blockedSlots, rooms } from '@/lib/db/schema';
+import { availabilityAdditions, blockedSlots, rooms, coachSettings, users } from '@/lib/db/schema';
 import { eq, and, gte } from 'drizzle-orm';
 import { AddAvailabilityExceptionForm } from '@/components/coach/add-availability-exception-form';
 import { AvailabilityAdditionsList } from '@/components/coach/availability-additions-list';
+import { AddBlockedSlotForm } from '@/components/coach/add-blocked-slot-form';
+import { BlockedSlotsList } from '@/components/coach/blocked-slots-list';
 
 export default async function CoachAvailabilityExceptionsPage() {
   const session = await auth.api.getSession({
@@ -24,6 +26,17 @@ export default async function CoachAvailabilityExceptionsPage() {
     },
   });
 
+  // Fetch coach settings for default room
+  const settings = await db.query.coachSettings.findFirst({
+    where: eq(coachSettings.coachId, session.user.id),
+  });
+
+  // Fetch all members for association
+  const allMembers = await db.query.users.findMany({
+    where: eq(users.role, 'member'),
+    orderBy: (table, { asc }) => [asc(table.name)],
+  });
+
   // Fetch availability additions (future only)
   const additions = await db.query.availabilityAdditions.findMany({
     where: and(
@@ -40,7 +53,6 @@ export default async function CoachAvailabilityExceptionsPage() {
       gte(blockedSlots.startTime, new Date())
     ),
     orderBy: (table, { asc }) => [asc(table.startTime)],
-    limit: 5,
   });
 
   return (
@@ -61,49 +73,28 @@ export default async function CoachAvailabilityExceptionsPage() {
               Disponibilités exceptionnelles que vous avez ajoutées
             </p>
           </div>
-          <AddAvailabilityExceptionForm rooms={allRooms} />
+          <AddAvailabilityExceptionForm
+            rooms={allRooms}
+            members={allMembers}
+            defaultRoomId={settings?.defaultRoomId || undefined}
+          />
         </div>
         <AvailabilityAdditionsList additions={additions} />
       </div>
 
-      {/* Blocked Slots Reference */}
-      {blocked.length > 0 && (
-        <div className="rounded-lg border bg-gray-50 p-6">
-          <h2 className="mb-4 text-xl font-semibold">Créneaux bloqués récents</h2>
-          <div className="space-y-2">
-            {blocked.map((block) => (
-              <div
-                key={block.id}
-                className="flex items-center justify-between rounded-lg border bg-white p-3"
-              >
-                <div>
-                  <div className="font-medium">
-                    {new Date(block.startTime).toLocaleDateString('fr-FR', {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'long',
-                    })}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {new Date(block.startTime).toLocaleTimeString('fr-FR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}{' '}
-                    -{' '}
-                    {new Date(block.endTime).toLocaleTimeString('fr-FR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </div>
-                  {block.reason && (
-                    <div className="mt-1 text-sm text-gray-500">{block.reason}</div>
-                  )}
-                </div>
-              </div>
-            ))}
+      {/* Blocked Slots Section */}
+      <div className="rounded-lg border bg-white p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Créneaux bloqués</h2>
+            <p className="text-sm text-gray-600">
+              Périodes où vous n'êtes PAS disponible (vacances, RDV...)
+            </p>
           </div>
+          <AddBlockedSlotForm />
         </div>
-      )}
+        <BlockedSlotsList blockedSlots={blocked} />
+      </div>
 
       {/* Info Section */}
       <div className="mt-6 rounded-lg bg-blue-50 p-4">

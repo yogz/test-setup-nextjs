@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { updateCoachSettingsAction, updateWeeklyAvailabilityAction } from '@/app/actions/coach-availability-actions';
@@ -27,8 +26,6 @@ interface CoachSettings {
 interface WeeklySlot {
     startTime: string;
     endTime: string;
-    isIndividual: boolean;
-    isGroup: boolean;
     roomId?: string;
 }
 
@@ -82,14 +79,10 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                 slots: daySlots.length > 0 ? daySlots.map(s => ({
                     startTime: s.startTime,
                     endTime: s.endTime,
-                    isIndividual: s.isIndividual ?? false,
-                    isGroup: s.isGroup ?? false,
                     roomId: s.roomId || settings.defaultRoomId || undefined,
                 })) : [{
                     startTime: '09:00',
                     endTime: '18:00',
-                    isIndividual: false,
-                    isGroup: false,
                     roomId: settings.defaultRoomId || undefined,
                 }]
             };
@@ -124,8 +117,6 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                     slots: [...day.slots, {
                         startTime: '12:00',
                         endTime: '13:00',
-                        isIndividual: false,
-                        isGroup: false,
                         roomId: settings.defaultRoomId || undefined,
                     }]
                 };
@@ -322,26 +313,6 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
-                                                </div>
-
-                                                {/* Type Selection */}
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id={`indiv-${day.dayOfWeek}-${index}`}
-                                                            checked={slot.isIndividual}
-                                                            onCheckedChange={(checked) => updateSlot(day.dayOfWeek, index, 'isIndividual', !!checked)}
-                                                        />
-                                                        <Label htmlFor={`indiv-${day.dayOfWeek}-${index}`}>Individuel</Label>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id={`group-${day.dayOfWeek}-${index}`}
-                                                            checked={slot.isGroup}
-                                                            onCheckedChange={(checked) => updateSlot(day.dayOfWeek, index, 'isGroup', !!checked)}
-                                                        />
-                                                        <Label htmlFor={`group-${day.dayOfWeek}-${index}`}>Collectif</Label>
-                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

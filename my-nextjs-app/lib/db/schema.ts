@@ -172,6 +172,7 @@ export const trainingSessions = pgTable('training_sessions', {
   recurrenceEndDate: timestamp('recurrence_end_date'),
   level: varchar('level', { length: 50 }), // ALL, BEGINNER, INTERMEDIATE, ADVANCED
   minParticipants: integer('min_participants'),
+  frequency: integer('frequency').default(1), // 1=weekly, 2=bi-weekly, etc.
   visibility: varchar('visibility', { length: 20 }).default('PUBLIC'), // PUBLIC, PRIVATE
   material: text('material'),
 
@@ -342,6 +343,7 @@ export const recurringBookings = pgTable('recurring_bookings', {
   endTime: varchar('end_time', { length: 5 }).notNull(), // "HH:MM"
   startDate: date('start_date').notNull(), // Date de début de la récurrence
   endDate: date('end_date'), // null = indéfini
+  frequency: integer('frequency').default(1).notNull(), // 1=weekly, 2=bi-weekly, etc.
   status: recurringBookingStatusEnum('status').default('ACTIVE').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   cancelledAt: timestamp('cancelled_at'),

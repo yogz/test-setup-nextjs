@@ -90,6 +90,8 @@ export async function updateWeeklyAvailabilityAction(dayOfWeek: number, slots: {
                     coachId: user.id,
                     dayOfWeek,
                     ...slot,
+                    isIndividual: true, // Les disponibilités des coachs sont toujours individuelles
+                    isGroup: false,
                 }))
             );
         }

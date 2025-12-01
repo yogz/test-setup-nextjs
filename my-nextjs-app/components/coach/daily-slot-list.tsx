@@ -6,13 +6,12 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Lock, Users, UserPlus, MapPin } from 'lucide-react';
+import { MapPin, Users, UserPlus, Lock, Repeat } from 'lucide-react';
 import { BlockSlotModal } from './modals/block-slot-modal';
 import { BookMemberModal } from './modals/book-member-modal';
 import { CreateClassModal } from './modals/create-class-modal';
 import { EventDetailsModal } from './modals/event-details-modal';
+import { ActionMenuModal } from './modals/action-menu-modal';
 
 // Types (reused/adapted from coach-calendar)
 interface WeeklyAvailability {
@@ -51,6 +50,9 @@ interface Session {
     bookings: any[];
     roomId: string;
     description: string | null;
+    member?: { id: string; name: string } | null;
+    room?: { id: string; name: string } | null;
+    isRecurring?: boolean;
 }
 
 interface DailySlotListProps {
@@ -75,6 +77,7 @@ interface DailySlot {
     isGroup: boolean;
     roomId?: string;
     isExceptional?: boolean;
+    isRecurring?: boolean; // True if slot comes from weekly template
 }
 
 export function DailySlotList({
@@ -194,7 +197,8 @@ export function DailySlotList({
                     block,
                     isIndividual: avail.isIndividual,
                     isGroup: avail.isGroup,
-                    roomId: session?.roomId || avail.roomId
+                    roomId: session?.roomId || avail.roomId,
+                    isRecurring: true, // Slots from weekly template are recurring
                 });
 
                 currentSlotTime = slotEnd;
@@ -230,17 +234,79 @@ export function DailySlotList({
                 if (session) status = 'BOOKED';
                 else if (block) status = 'BLOCKED';
 
-                slots.push({
-                    time: timeStr,
-                    date: currentSlotTime,
-                    status,
-                    session,
-                    block,
-                    isIndividual: addition.isIndividual,
-                    isGroup: addition.isGroup,
-                    roomId: session?.roomId || addition.roomId,
-                    isExceptional: true
-                });
+                // Check if this slot already exists (e.g. from weekly availability)
+                // If it does, we might want to override it or skip.
+                // Usually exceptional availability overrides weekly.
+                // But here we are just adding to the list.
+                // Let's check if a slot at this time already exists.
+                const existingSlotIndex = slots.findIndex(s => s.time === timeStr);
+                if (existingSlotIndex >= 0) {
+                    // Replace existing slot with exceptional one
+                    slots[existingSlotIndex] = {
+                        time: timeStr,
+                        date: currentSlotTime,
+                        status,
+                        session,
+                        block,
+                        isIndividual: addition.isIndividual,
+                        isGroup: addition.isGroup,
+                        roomId: session?.roomId || addition.roomId,
+                        isExceptional: true,
+                        isRecurring: false, // Exceptional slots are not recurring
+                    };
+                } else {
+                    slots.push({
+                        time: timeStr,
+                        date: currentSlotTime,
+                        status,
+                        session,
+                        block,
+                        isIndividual: addition.isIndividual,
+                        isGroup: addition.isGroup,
+                        roomId: session?.roomId || addition.roomId,
+                        isExceptional: true,
+                        isRecurring: false, // Exceptional slots are not recurring
+                    });
+                }
+
+                currentSlotTime = slotEnd;
+            }
+        });
+
+        // Add standalone blocked slots (that don't overlap with availability)
+        // Filter blocks for this day
+        const dayBlocks = blockedSlots.filter(b => {
+            const bStart = new Date(b.startTime);
+            return isSameDay(bStart, date);
+        });
+
+        dayBlocks.forEach(block => {
+            const bStart = new Date(block.startTime);
+            const bEnd = new Date(block.endTime);
+
+            let currentSlotTime = bStart;
+
+            while (isBefore(currentSlotTime, bEnd)) {
+                const timeStr = format(currentSlotTime, 'HH:mm');
+                const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + 60);
+
+                // Check if slot already exists
+                const existingSlot = slots.find(s => s.time === timeStr);
+
+                if (!existingSlot) {
+                    slots.push({
+                        time: timeStr,
+                        date: currentSlotTime,
+                        status: 'BLOCKED',
+                        session: undefined,
+                        block: block,
+                        isIndividual: false, // Default
+                        isGroup: false,      // Default
+                        roomId: undefined,
+                        isExceptional: false,
+                        isRecurring: false, // Blocked slots are not recurring
+                    });
+                }
 
                 currentSlotTime = slotEnd;
             }
@@ -303,6 +369,9 @@ export function DailySlotList({
                                                     <UserPlus className="h-3 w-3 text-white" />
                                             )}
                                             <span className="text-xs md:text-sm font-bold text-white">{slot.time}</span>
+                                            {slot.status === 'BOOKED' && slot.isRecurring && (
+                                                <Repeat className="h-3 w-3 text-white" />
+                                            )}
                                         </div>
 
                                         {/* Content Section */}
@@ -402,63 +471,23 @@ export function DailySlotList({
             />
 
             {/* Action Menu */}
-            <Dialog open={isActionMenuOpen} onOpenChange={setIsActionMenuOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Que souhaitez-vous faire ?</DialogTitle>
-                        <DialogDescription>
-                            {selectedSlot && (
-                                <>
-                                    {format(selectedSlot.date, 'EEEE d MMMM', { locale: fr })}
-                                    {' à '}
-                                    {selectedSlot.time}
-                                </>
-                            )}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-3 py-4">
-                        <Button
-                            variant="outline"
-                            className="justify-start h-auto py-4 px-4"
-                            onClick={() => {
-                                setIsActionMenuOpen(false);
-                                setIsBlockModalOpen(true);
-                            }}
-                        >
-                            <Lock className="mr-3 h-5 w-5" />
-                            <div className="text-left">
-                                <div className="font-medium">Bloquer ce créneau</div>
-                            </div>
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="justify-start h-auto py-4 px-4"
-                            onClick={() => {
-                                setIsActionMenuOpen(false);
-                                setIsClassModalOpen(true);
-                            }}
-                        >
-                            <Users className="mr-3 h-5 w-5" />
-                            <div className="text-left">
-                                <div className="font-medium">Créer un cours collectif</div>
-                            </div>
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="justify-start h-auto py-4 px-4"
-                            onClick={() => {
-                                setIsActionMenuOpen(false);
-                                setIsBookModalOpen(true);
-                            }}
-                        >
-                            <UserPlus className="mr-3 h-5 w-5" />
-                            <div className="text-left">
-                                <div className="font-medium">Réserver pour un membre</div>
-                            </div>
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <ActionMenuModal
+                isOpen={isActionMenuOpen}
+                onClose={() => setIsActionMenuOpen(false)}
+                selectedSlot={selectedSlot}
+                onBlockSlot={() => {
+                    setIsActionMenuOpen(false);
+                    setIsBlockModalOpen(true);
+                }}
+                onCreateClass={() => {
+                    setIsActionMenuOpen(false);
+                    setIsClassModalOpen(true);
+                }}
+                onBookMember={() => {
+                    setIsActionMenuOpen(false);
+                    setIsBookModalOpen(true);
+                }}
+            />
 
             {/* Event Details Modal Wrapper */}
             {selectedEvent && (
@@ -470,8 +499,18 @@ export function DailySlotList({
                         start: selectedEvent.session?.startTime ? new Date(selectedEvent.session.startTime) : new Date(selectedEvent.block!.startTime),
                         end: selectedEvent.session?.endTime ? new Date(selectedEvent.session.endTime) : new Date(selectedEvent.block!.endTime),
                         type: selectedEvent.session?.type || 'BLOCKED',
-                        session: selectedEvent.session,
-                        block: selectedEvent.block
+                        session: selectedEvent.session ? {
+                            id: selectedEvent.session.id,
+                            capacity: selectedEvent.session.capacity,
+                            bookings: selectedEvent.session.bookings,
+                            description: selectedEvent.session.title,
+                            room: selectedEvent.session.room,
+                            member: selectedEvent.session.member
+                        } : undefined,
+                        block: selectedEvent.block ? {
+                            id: selectedEvent.block.id,
+                            reason: selectedEvent.block.reason
+                        } : undefined
                     }}
                 />
             )}

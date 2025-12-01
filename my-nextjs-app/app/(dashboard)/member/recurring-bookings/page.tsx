@@ -66,7 +66,7 @@ export default async function MemberRecurringBookingsPage() {
       </div>
 
       <div className="rounded-lg border bg-white p-6">
-        <RecurringBookingsList bookings={myBookings} />
+        <RecurringBookingsList bookings={myBookings as any} />
       </div>
 
       {/* Info Section */}

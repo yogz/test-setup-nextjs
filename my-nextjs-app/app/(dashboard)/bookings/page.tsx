@@ -38,10 +38,10 @@ export default async function BookingsPage() {
 
     // Separate into upcoming and past bookings
     const upcomingBookings = userBookings.filter(
-        b => b.status === 'CONFIRMED' && new Date(b.session.startTime) >= now
+        b => b.status === 'CONFIRMED' && new Date((b.session as any).startTime) >= now
     );
     const pastBookings = userBookings.filter(
-        b => b.status === 'CONFIRMED' && new Date(b.session.startTime) < now
+        b => b.status === 'CONFIRMED' && new Date((b.session as any).startTime) < now
     );
     const cancelledBookings = userBookings.filter(
         b => b.status === 'CANCELLED_BY_MEMBER' || b.status === 'CANCELLED_BY_COACH'
