@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { AddCoachModal } from '@/components/owner/add-coach-modal';
 import { AddRoomModal } from '@/components/owner/add-room-modal';
 import { AddLocationModal } from '@/components/owner/add-location-modal';
+import { resetDatabaseAction } from '@/app/actions/dev-actions';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function DashboardPage() {
   const [isAddCoachOpen, setIsAddCoachOpen] = useState(false);
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     // Redirect to home if not authenticated
@@ -120,6 +122,27 @@ export default function DashboardPage() {
     }
     setIsEditing(false);
     setSaveMessage('');
+  };
+
+  const handleResetDatabase = async () => {
+    if (!window.confirm('⚠️ ATTENTION: Cela va supprimer toutes les réservations, disponibilités et récurrences. Continuer ?')) {
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const result = await resetDatabaseAction();
+      if (result.success) {
+        alert('✅ Base de données réinitialisée avec succès !');
+        window.location.reload();
+      } else {
+        alert('❌ Erreur: ' + result.error);
+      }
+    } catch (error) {
+      alert('❌ Erreur lors de la réinitialisation');
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   // Show loading state while checking authentication
@@ -416,6 +439,19 @@ export default function DashboardPage() {
             <CardContent className="space-y-2 text-sm">
               <p><span className="font-medium text-gray-600">Expires:</span> {new Date(session.session.expiresAt).toLocaleDateString()}</p>
               <p><span className="font-medium text-gray-600">Created:</span> {new Date(session.user.createdAt).toLocaleDateString()}</p>
+              {process.env.NODE_ENV === 'development' && (
+                <div className="pt-2 border-t border-red-200">
+                  <Button
+                    onClick={handleResetDatabase}
+                    disabled={isResetting}
+                    variant="destructive"
+                    size="sm"
+                    className="w-full text-xs"
+                  >
+                    {isResetting ? '🔄 Réinitialisation...' : '🗑️ Reset DB (Dev)'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

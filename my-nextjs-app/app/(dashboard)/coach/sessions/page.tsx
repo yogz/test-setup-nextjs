@@ -71,6 +71,7 @@ export default async function CoachSessionsPage() {
             allRooms={allRooms}
             allMembers={allMembers}
             coachName={session.user.name || 'Coach'}
+            coachId={session.user.id}
         />
     );
 }

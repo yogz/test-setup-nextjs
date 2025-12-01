@@ -14,6 +14,7 @@ interface CoachSessionsViewProps {
     allRooms: any[];
     allMembers: any[];
     coachName: string;
+    coachId: string;
 }
 
 export function CoachSessionsView({
@@ -24,7 +25,8 @@ export function CoachSessionsView({
     availabilityAdditions,
     allRooms,
     allMembers,
-    coachName
+    coachName,
+    coachId
 }: CoachSessionsViewProps) {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -67,6 +69,7 @@ export function CoachSessionsView({
                             rooms={allRooms}
                             members={allMembers}
                             coachName={coachName}
+                            coachId={coachId}
                         />
                     </TabsContent>
 

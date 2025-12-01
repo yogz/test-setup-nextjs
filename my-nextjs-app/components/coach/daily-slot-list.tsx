@@ -63,6 +63,7 @@ interface DailySlotListProps {
     rooms: any[];
     members: any[];
     coachName: string;
+    coachId: string;
 }
 
 type SlotStatus = 'FREE' | 'BLOCKED' | 'BOOKED' | 'EXCEPTIONAL';
@@ -87,7 +88,8 @@ export function DailySlotList({
     sessions,
     rooms,
     members,
-    coachName
+    coachName,
+    coachId
 }: DailySlotListProps) {
     const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null);
     const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -468,6 +470,7 @@ export function DailySlotList({
                 initialDate={selectedSlot?.date}
                 members={members}
                 rooms={rooms}
+                coachId={coachId}
             />
 
             {/* Action Menu */}

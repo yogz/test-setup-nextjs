@@ -24,6 +24,7 @@ export type CreateRecurringBookingInput = {
   endTime: string; // "HH:MM"
   startDate: string; // ISO date string
   endDate?: string; // ISO date string, null = indefinite
+  memberId?: string; // Optional: only for coach/owner to book for a member
 };
 
 export type CancelRecurringBookingInput = {
@@ -59,7 +60,27 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
       return { success: false, error: 'Only members can create bookings' };
     }
 
-    const { coachId, dayOfWeek, startTime, endTime, startDate, endDate } = data;
+    const { coachId, dayOfWeek, startTime, endTime, startDate, endDate, memberId } = data;
+
+    // Determine the target member ID
+    let targetMemberId = user.id;
+
+    if (memberId && memberId !== user.id) {
+      // If trying to book for someone else, must be coach or owner
+      if (user.role !== 'coach' && user.role !== 'owner') {
+        return { success: false, error: 'Unauthorized to book for other members' };
+      }
+      targetMemberId = memberId;
+
+      // Verify target member exists
+      const targetMember = await db.query.users.findFirst({
+        where: eq(users.id, targetMemberId),
+      });
+
+      if (!targetMember || targetMember.role !== 'member') {
+        return { success: false, error: 'Target member not found' };
+      }
+    }
 
     // 1. Verify coach exists
     const coach = await db.query.users.findFirst({
@@ -115,7 +136,7 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
 
     // 4. Create the recurring booking
     const [newRecurringBooking] = await db.insert(recurringBookings).values({
-      memberId: user.id,
+      memberId: targetMemberId,
       coachId,
       dayOfWeek,
       startTime,
@@ -260,8 +281,7 @@ export async function generateSessionsForRecurringBooking(
     const { dayOfWeek, startTime, endTime, startDate, endDate } = booking;
 
     // 2. Calculate date range
-    const today = new Date();
-    const start = new Date(Math.max(today.getTime(), new Date(startDate).getTime()));
+    const start = new Date(startDate);
     const horizon = new Date();
     horizon.setDate(horizon.getDate() + (weeksAhead * 7));
 
@@ -292,11 +312,13 @@ export async function generateSessionsForRecurringBooking(
         const sessionEnd = new Date(currentDate);
         sessionEnd.setHours(endHour, endMin, 0, 0);
 
-        // Skip if in the past
-        if (sessionStart < today) {
-          currentDate.setDate(currentDate.getDate() + 1);
-          continue;
-        }
+        // Skip if in the past (before today's start)
+        // We allow sessions earlier today to be created (backdating for the day)
+        // We also allow sessions in the past if the user explicitly requested it (startDate < today)
+        // So we only skip if the session is BEFORE the requested start date (which shouldn't happen due to loop)
+        // or if we want to enforce some other rule.
+        // But here we want to allow backdating.
+        // So we remove the check against todayStart.
 
         // Check if session already exists
         const existingSession = await db.query.trainingSessions.findFirst({
