@@ -260,8 +260,14 @@ export function BookMemberModal({
                                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                             </div>
                             <div className="space-y-2">
-                                <Label>Heure</Label>
-                                <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                                <Label>Heure (HH:MM)</Label>
+                                <Input
+                                    type="text"
+                                    value={time}
+                                    onChange={(e) => setTime(e.target.value)}
+                                    placeholder="10:00"
+                                    pattern="[0-9]{2}:[0-9]{2}"
+                                />
                             </div>
                         </div>
 

@@ -27,6 +27,7 @@ interface WeeklySlot {
     startTime: string;
     endTime: string;
     roomId?: string;
+    duration?: number; // Duration in minutes
 }
 
 interface DayAvailability {
@@ -76,19 +77,28 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
             return {
                 dayOfWeek: day.value,
                 isActive: daySlots.length > 0,
-                slots: daySlots.length > 0 ? daySlots.map(s => ({
-                    startTime: s.startTime,
-                    endTime: s.endTime,
-                    roomId: s.roomId || settings.defaultRoomId || undefined,
-                })) : [{
+                slots: daySlots.length > 0 ? daySlots.map(s => {
+                    // Calculate duration from start and end time
+                    const [startHour, startMin] = s.startTime.split(':').map(Number);
+                    const [endHour, endMin] = s.endTime.split(':').map(Number);
+                    const durationMins = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+
+                    return {
+                        startTime: s.startTime,
+                        endTime: s.endTime,
+                        roomId: s.roomId || settings.defaultRoomId || undefined,
+                        duration: durationMins || settings.defaultDuration,
+                    };
+                }) : [{
                     startTime: '09:00',
                     endTime: '18:00',
                     roomId: settings.defaultRoomId || undefined,
+                    duration: settings.defaultDuration,
                 }]
             };
         });
         setAvailability(initialState);
-    }, [initialAvailability, settings.defaultRoomId]);
+    }, [initialAvailability, settings.defaultRoomId, settings.defaultDuration]);
 
     const handleSettingsChange = async (key: keyof CoachSettings, value: any) => {
         const newSettings = { ...settings, [key]: value === '' ? null : value };
@@ -112,12 +122,21 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
     const addSlot = (dayOfWeek: number) => {
         setAvailability(prev => prev.map(day => {
             if (day.dayOfWeek === dayOfWeek) {
+                const duration = settings.defaultDuration;
+                const startTime = '12:00';
+                const [hours, minutes] = startTime.split(':').map(Number);
+                const totalMinutes = hours * 60 + minutes + duration;
+                const endHours = Math.floor(totalMinutes / 60);
+                const endMinutes = totalMinutes % 60;
+                const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+
                 return {
                     ...day,
                     slots: [...day.slots, {
-                        startTime: '12:00',
-                        endTime: '13:00',
+                        startTime,
+                        endTime,
                         roomId: settings.defaultRoomId || undefined,
+                        duration,
                     }]
                 };
             }
@@ -142,13 +161,9 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                 const newSlots = [...day.slots];
                 newSlots[index] = { ...newSlots[index], [field]: value };
 
-                // Auto-calculate end time when start time changes
-                if (field === 'startTime' && value) {
-                    const [hours, minutes] = value.split(':').map(Number);
-                    const totalMinutes = hours * 60 + minutes + settings.defaultDuration;
-                    const endHours = Math.floor(totalMinutes / 60);
-                    const endMinutes = totalMinutes % 60;
-                    newSlots[index].endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+                // Update duration if it was changed
+                if (field === 'duration') {
+                    newSlots[index].duration = parseInt(value);
                 }
 
                 return { ...day, slots: newSlots };
@@ -291,6 +306,20 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Label className="text-sm text-muted-foreground whitespace-nowrap">Durée session:</Label>
+                                                        <div className="flex items-center gap-1">
+                                                            <Input
+                                                                type="number"
+                                                                value={slot.duration || settings.defaultDuration}
+                                                                onChange={(e) => updateSlot(day.dayOfWeek, index, 'duration', e.target.value)}
+                                                                className="w-20"
+                                                                min="15"
+                                                                step="15"
+                                                            />
+                                                            <span className="text-sm text-muted-foreground">min</span>
+                                                        </div>
                                                     </div>
                                                     <Select
                                                         value={slot.roomId || ''}

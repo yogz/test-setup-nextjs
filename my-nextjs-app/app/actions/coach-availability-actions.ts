@@ -71,7 +71,7 @@ export async function getWeeklyAvailabilityAction() {
     });
 }
 
-export async function updateWeeklyAvailabilityAction(dayOfWeek: number, slots: { startTime: string, endTime: string, roomId?: string }[]) {
+export async function updateWeeklyAvailabilityAction(dayOfWeek: number, slots: { startTime: string, endTime: string, roomId?: string, duration?: number }[]) {
     const user = await getCoach();
 
     // Transaction: Delete existing slots for this day and insert new ones

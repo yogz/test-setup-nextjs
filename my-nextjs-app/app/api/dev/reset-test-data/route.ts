@@ -1,5 +1,4 @@
-'use server';
-
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import {
   bookings,
@@ -11,18 +10,17 @@ import {
   coachAvailabilities,
 } from '@/lib/db/schema';
 
-/**
- * Development only: Reset all bookings, availability, and recurring slots
- * This is useful for testing to start fresh
- */
-export async function resetTestData() {
-  console.log('🔄 resetTestData called');
+export async function POST() {
+  console.log('🔄 Reset test data API called');
   console.log('NODE_ENV:', process.env.NODE_ENV);
 
   // Only allow in development
   if (process.env.NODE_ENV !== 'development') {
     console.error('❌ Not in development mode');
-    return { success: false, message: 'This action is only available in development mode' };
+    return NextResponse.json(
+      { success: false, message: 'This endpoint is only available in development mode' },
+      { status: 403 }
+    );
   }
 
   try {
@@ -55,12 +53,18 @@ export async function resetTestData() {
     await db.delete(coachAvailabilities);
 
     console.log('✅ All test data deleted successfully');
-    return { success: true, message: 'All test data has been reset successfully' };
+    return NextResponse.json({
+      success: true,
+      message: 'All test data has been reset successfully'
+    });
   } catch (error) {
     console.error('❌ Error resetting test data:', error);
-    return {
-      success: false,
-      message: `Failed to reset test data: ${error instanceof Error ? error.message : 'Unknown error'}`
-    };
+    return NextResponse.json(
+      {
+        success: false,
+        message: `Failed to reset test data: ${error instanceof Error ? error.message : 'Unknown error'}`
+      },
+      { status: 500 }
+    );
   }
 }

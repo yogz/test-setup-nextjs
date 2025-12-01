@@ -295,6 +295,7 @@ export const weeklyAvailability = pgTable('weekly_availability', {
   dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 1=Monday, etc.
   startTime: varchar('start_time', { length: 5 }).notNull(), // "HH:MM"
   endTime: varchar('end_time', { length: 5 }).notNull(), // "HH:MM"
+  duration: integer('duration'), // Duration in minutes (optional, calculated from start/end if not provided)
   isIndividual: boolean('is_individual').default(false).notNull(),
   isGroup: boolean('is_group').default(false).notNull(),
   roomId: text('room_id').references(() => rooms.id), // Optional room assignment

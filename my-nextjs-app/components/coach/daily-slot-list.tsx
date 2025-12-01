@@ -6,7 +6,7 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { MapPin, Users, UserPlus, Lock, Repeat } from 'lucide-react';
+import { MapPin, Users, User, Lock, Repeat } from 'lucide-react';
 import { BlockSlotModal } from './modals/block-slot-modal';
 import { BookMemberModal } from './modals/book-member-modal';
 import { CreateClassModal } from './modals/create-class-modal';
@@ -79,6 +79,7 @@ interface DailySlot {
     roomId?: string;
     isExceptional?: boolean;
     isRecurring?: boolean; // True if slot comes from weekly template
+    duration?: number; // Duration in minutes
 }
 
 export function DailySlotList({
@@ -168,9 +169,13 @@ export function DailySlotList({
             let currentSlotTime = setMinutes(setHours(date, startHour), startMinute);
             const endTime = setMinutes(setHours(date, endHour), endMinute);
 
+            // Calculate slot duration from availability or fallback to calculated duration
+            const slotDuration = avail.duration ||
+                ((endHour * 60 + endMinute) - (startHour * 60 + startMinute));
+
             while (isBefore(currentSlotTime, endTime)) {
                 const timeStr = format(currentSlotTime, 'HH:mm');
-                const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + 60); // Assuming 1h slots for now
+                const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + slotDuration);
 
                 // Check for sessions
                 const session = sessions.find(s => {
@@ -200,7 +205,8 @@ export function DailySlotList({
                     isIndividual: avail.isIndividual,
                     isGroup: avail.isGroup,
                     roomId: session?.roomId || avail.roomId,
-                    isRecurring: true, // Slots from weekly template are recurring
+                    isRecurring: session?.recurringBookingId ? true : false, // Only recurring if session has recurringBookingId
+                    duration: slotDuration,
                 });
 
                 currentSlotTime = slotEnd;
@@ -212,11 +218,14 @@ export function DailySlotList({
             const addStart = new Date(addition.startTime);
             const addEnd = new Date(addition.endTime);
 
+            // Calculate duration for exceptional slots (default to 60 if not available)
+            const exceptionalDuration = 60; // TODO: Add duration field to availabilityAdditions table if needed
+
             let currentSlotTime = addStart;
 
             while (isBefore(currentSlotTime, addEnd)) {
                 const timeStr = format(currentSlotTime, 'HH:mm');
-                const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + 60);
+                const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + exceptionalDuration);
 
                 // Check for sessions
                 const session = sessions.find(s => {
@@ -254,7 +263,8 @@ export function DailySlotList({
                         isGroup: addition.isGroup,
                         roomId: session?.roomId || addition.roomId,
                         isExceptional: true,
-                        isRecurring: false, // Exceptional slots are not recurring
+                        isRecurring: session?.recurringBookingId ? true : false, // Only recurring if session has recurringBookingId
+                        duration: exceptionalDuration,
                     };
                 } else {
                     slots.push({
@@ -267,7 +277,8 @@ export function DailySlotList({
                         isGroup: addition.isGroup,
                         roomId: session?.roomId || addition.roomId,
                         isExceptional: true,
-                        isRecurring: false, // Exceptional slots are not recurring
+                        isRecurring: session?.recurringBookingId ? true : false, // Only recurring if session has recurringBookingId
+                        duration: exceptionalDuration,
                     });
                 }
 
@@ -307,6 +318,7 @@ export function DailySlotList({
                         roomId: undefined,
                         isExceptional: false,
                         isRecurring: false, // Blocked slots are not recurring
+                        duration: 60, // Default duration for blocked slots
                     });
                 }
 
@@ -351,10 +363,33 @@ export function DailySlotList({
                                     ? rooms.find(r => r.id === slot.roomId)?.name
                                     : null;
 
+                                // Check if there's a time gap before this slot
+                                const hasGapBefore = index > 0 && (() => {
+                                    const prevSlot = slots[index - 1];
+                                    const prevTime = new Date(prevSlot.date);
+                                    const currentTime = new Date(slot.date);
+                                    const prevDuration = prevSlot.duration || 60; // Use actual duration or default to 60 minutes
+                                    const expectedNextTime = new Date(prevTime.getTime() + prevDuration * 60 * 1000);
+                                    return currentTime.getTime() > expectedNextTime.getTime();
+                                })();
+
                                 return (
-                                    <Card
-                                        key={`${day.toISOString()}-${index}`}
-                                        onClick={() => handleSlotClick(slot)}
+                                    <>
+                                        {hasGapBefore && (
+                                            <div
+                                                key={`gap-${day.toISOString()}-${index}`}
+                                                className="flex flex-col items-center justify-center gap-2 p-3 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-dashed border-slate-300"
+                                            >
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-400 to-transparent" />
+                                                    <span className="text-xs font-medium text-slate-500 italic">Pause</span>
+                                                    <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-400 to-transparent" />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <Card
+                                            key={`${day.toISOString()}-${index}`}
+                                            onClick={() => handleSlotClick(slot)}
                                         className={cn(
                                             "group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-0 p-0",
                                             slot.status === 'FREE' && "bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 shadow-sm",
@@ -368,7 +403,7 @@ export function DailySlotList({
                                             {slot.status === 'BOOKED' && slot.session && (
                                                 slot.session.type === 'GROUP' ?
                                                     <Users className="h-3 w-3 text-white" /> :
-                                                    <UserPlus className="h-3 w-3 text-white" />
+                                                    <User className="h-3 w-3 text-white" />
                                             )}
                                             <span className="text-xs md:text-sm font-bold text-white">{slot.time}</span>
                                             {slot.status === 'BOOKED' && slot.isRecurring && (
@@ -421,6 +456,7 @@ export function DailySlotList({
                                         {/* Subtle shine effect on hover */}
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                                     </Card>
+                                    </>
                                 );
                             })}
                         </div>

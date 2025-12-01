@@ -50,6 +50,13 @@
       "when": 1764506514341,
       "tag": "0006_familiar_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1764630138125,
+      "tag": "0007_peaceful_sister_grimm",
+      "breakpoints": true
     }
   ]
 }

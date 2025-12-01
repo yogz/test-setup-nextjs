@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { resetTestData } from '@/app/actions/dev-reset';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -73,14 +72,29 @@ export default function Home() {
 
     setIsResetting(true);
     try {
-      const result = await resetTestData();
+      console.log('Calling reset test data API...');
+      const response = await fetch('/api/dev/reset-test-data', {
+        method: 'POST',
+      });
+
+      console.log('Response status:', response.status);
+      const result = await response.json();
+      console.log('Result:', result);
+
       if (result.success) {
-        alert('✅ Toutes les données de test ont été réinitialisées avec succès !');
+        setTimeout(() => {
+          alert('✅ Toutes les données de test ont été réinitialisées avec succès !');
+        }, 100);
       } else {
-        alert('❌ Erreur : ' + result.message);
+        setTimeout(() => {
+          alert('❌ Erreur : ' + result.message);
+        }, 100);
       }
     } catch (error) {
-      alert('❌ Erreur lors de la réinitialisation des données');
+      console.error('Error in handleResetTestData:', error);
+      setTimeout(() => {
+        alert('❌ Erreur lors de la réinitialisation des données: ' + (error instanceof Error ? error.message : String(error)));
+      }, 100);
     } finally {
       setIsResetting(false);
     }
