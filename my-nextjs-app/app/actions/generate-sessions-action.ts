@@ -113,7 +113,7 @@ export async function generateSessionsFromTemplateAction(weeksAhead: number = 4)
     }
 
     revalidatePath('/coach/sessions');
-    revalidatePath('/schedule');
+    revalidatePath('/bookings');
 
     return {
         created: createdCount,

@@ -127,7 +127,7 @@ export async function createBookingAction(data: CreateBookingInput) {
             status: 'CONFIRMED',
         });
 
-        revalidatePath('/schedule');
+        revalidatePath('/bookings');
         return { success: true, message: 'Booking confirmed' };
     } catch (error) {
         return handleActionError(error);
@@ -219,7 +219,7 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
             results.push({ sessionId: futureSession.id, status: 'booked' });
         }
 
-        revalidatePath('/schedule');
+        revalidatePath('/bookings');
         const bookedCount = results.filter(r => r.status === 'booked').length;
         return {
             success: true,
@@ -260,7 +260,7 @@ export async function cancelBookingAction(data: CancelBookingInput) {
             .set({ status: 'CANCELLED_BY_MEMBER', cancelledAt: new Date() })
             .where(eq(bookings.id, bookingId));
 
-        revalidatePath('/schedule');
+        revalidatePath('/bookings');
         return { success: true, message: 'Booking cancelled' };
     } catch (error) {
         return handleActionError(error);
@@ -369,7 +369,7 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
             });
         });
 
-        revalidatePath('/schedule');
+        revalidatePath('/bookings');
         revalidatePath('/bookings');
         console.log('Booking successful for member:', targetMemberId);
         return { success: true, message: 'Session booked successfully' };

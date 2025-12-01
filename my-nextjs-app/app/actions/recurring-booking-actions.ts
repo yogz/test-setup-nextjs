@@ -128,8 +128,8 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
     // 5. Generate initial sessions (next 6 weeks)
     await generateSessionsForRecurringBooking(newRecurringBooking.id, 6);
 
-    revalidatePath('/schedule');
     revalidatePath('/bookings');
+    revalidatePath('/member/recurring-bookings');
 
     return {
       success: true,
@@ -190,8 +190,8 @@ export async function cancelRecurringBookingAction(data: CancelRecurringBookingI
       .set({ status: 'cancelled' })
       .where(sessionsToCancel);
 
-    revalidatePath('/schedule');
     revalidatePath('/bookings');
+    revalidatePath('/member/recurring-bookings');
 
     return {
       success: true,

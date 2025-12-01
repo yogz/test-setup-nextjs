@@ -99,3 +99,14 @@ Pour restaurer un fichier :
 # Exemple pour context-menu.tsx
 mv poubelle/components/ui/context-menu.tsx components/ui/
 ```
+
+---
+
+### Date: 1er décembre 2024 (Suppression page Schedule)
+
+| Dossier/Fichier | Origine | Raison |
+|----------------|---------|--------|
+| `schedule/` | `app/(dashboard)/` | Page Schedule supprimée (remplacée par Bookings et Recurring Bookings) |
+| `schedule/` | `components/` | Composants de la page Schedule (member-calendar, session-card, session-list, session-filters) |
+
+- **Description**: La page Schedule affichait toutes les sessions disponibles pour réservation. Fonctionnalité remplacée par la combinaison de `/bookings` (réservations ponctuelles) et `/member/recurring-bookings` (réservations récurrentes).

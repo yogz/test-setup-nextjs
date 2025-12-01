@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
     LayoutDashboard,
-    CalendarDays,
     BarChart3,
     LogOut,
     User,
@@ -55,11 +54,6 @@ export default async function DashboardLayout({
             {/* MEMBER LINKS - Only show for non-coach users */}
             {role === 'member' && (
                 <>
-                    <Link href="/schedule" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
-                        <CalendarDays size={24} className="md:w-5 md:h-5" />
-                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Schedule</span>
-                    </Link>
-
                     <Link href="/bookings" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
                         <BookCheck size={24} className="md:w-5 md:h-5" />
                         <span className="text-[10px] md:text-sm mt-1 md:mt-0">Bookings</span>

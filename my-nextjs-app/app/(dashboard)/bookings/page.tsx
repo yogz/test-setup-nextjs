@@ -183,7 +183,7 @@ export default async function BookingsPage() {
                         <div className="text-center py-12 text-muted-foreground">
                             <p>You have no upcoming bookings.</p>
                             <Button variant="link" className="mt-4" asChild>
-                                <a href="/schedule">Book a session</a>
+                                <a href="/member/recurring-bookings">Create a recurring booking</a>
                             </Button>
                         </div>
                     ) : (
