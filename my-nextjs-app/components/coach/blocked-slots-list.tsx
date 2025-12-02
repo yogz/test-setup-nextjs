@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { unblockSlotAction } from '@/app/actions/coach-availability-actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,9 +40,10 @@ export function BlockedSlotsList({ blockedSlots }: BlockedSlotsListProps) {
 
         try {
             await unblockSlotAction(slotId);
+            toast.success('Créneau débloqué');
             router.refresh();
         } catch (err) {
-            alert('Erreur lors du déblocage du créneau');
+            toast.error('Erreur lors du déblocage du créneau');
         } finally {
             setDeletingId(null);
         }

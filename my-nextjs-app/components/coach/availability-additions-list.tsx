@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { deleteAvailabilityAdditionAction } from '@/app/actions/availability-additions-actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,9 +42,10 @@ export function AvailabilityAdditionsList({ additions }: AvailabilityAdditionsLi
     const result = await deleteAvailabilityAdditionAction(additionId);
 
     if (result.success) {
+      toast.success('Créneau supprimé');
       router.refresh();
     } else {
-      alert(result.error || 'Erreur lors de la suppression');
+      toast.error(result.error || 'Erreur lors de la suppression');
     }
 
     setDeletingId(null);

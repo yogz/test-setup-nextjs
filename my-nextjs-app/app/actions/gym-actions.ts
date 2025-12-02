@@ -418,6 +418,117 @@ export async function confirmSessionAction(data: ConfirmSessionInput) {
     }
 }
 
+export async function markNoShowAction(data: { sessionId: string; bookingId?: string }) {
+    try {
+        const user = await requireUserWithPermission(PERMISSIONS.sessions.confirm);
+
+        // Only coaches/owners can mark no-shows
+        if (user.role === 'member') {
+            throw new ForbiddenError();
+        }
+
+        const { sessionId, bookingId } = data;
+
+        // Get the session to verify it exists and coach owns it
+        const session = await db.query.trainingSessions.findFirst({
+            where: eq(trainingSessions.id, sessionId),
+            with: {
+                bookings: true,
+            },
+        });
+
+        if (!session) {
+            return { success: false, error: 'Session non trouvée' };
+        }
+
+        // Verify coach owns the session
+        if (session.coachId !== user.id && user.role !== 'owner') {
+            throw new ForbiddenError();
+        }
+
+        // Check if session is in the past
+        if (new Date(session.startTime) > new Date()) {
+            return { success: false, error: 'Impossible de marquer une absence pour une session future' };
+        }
+
+        await db.transaction(async (tx) => {
+            // Update session status to no_show
+            await tx
+                .update(trainingSessions)
+                .set({ status: 'no_show' })
+                .where(eq(trainingSessions.id, sessionId));
+
+            // If specific booking ID provided, mark that one
+            // Otherwise mark all confirmed bookings as no-show
+            if (bookingId) {
+                await tx
+                    .update(bookings)
+                    .set({ status: 'NO_SHOW' })
+                    .where(eq(bookings.id, bookingId));
+            } else {
+                // Mark all confirmed bookings for this session as no-show
+                await tx
+                    .update(bookings)
+                    .set({ status: 'NO_SHOW' })
+                    .where(and(
+                        eq(bookings.sessionId, sessionId),
+                        eq(bookings.status, 'CONFIRMED')
+                    ));
+            }
+        });
+
+        revalidatePath('/coach/sessions');
+        revalidatePath('/bookings');
+        return { success: true, message: 'Absence enregistrée' };
+    } catch (error) {
+        return handleActionError(error);
+    }
+}
+
+export async function markAttendedAction(data: { sessionId: string; bookingId?: string }) {
+    try {
+        const user = await requireUserWithPermission(PERMISSIONS.sessions.confirm);
+
+        // Only coaches/owners can mark attendance
+        if (user.role === 'member') {
+            throw new ForbiddenError();
+        }
+
+        const { sessionId } = data;
+
+        // Get the session to verify it exists and coach owns it
+        const session = await db.query.trainingSessions.findFirst({
+            where: eq(trainingSessions.id, sessionId),
+        });
+
+        if (!session) {
+            return { success: false, error: 'Session non trouvée' };
+        }
+
+        // Verify coach owns the session
+        if (session.coachId !== user.id && user.role !== 'owner') {
+            throw new ForbiddenError();
+        }
+
+        // Check if session is in the past or ongoing
+        if (new Date(session.startTime) > new Date()) {
+            return { success: false, error: 'Impossible de confirmer une session future' };
+        }
+
+        // Update session status to completed
+        await db
+            .update(trainingSessions)
+            .set({ status: 'completed' })
+            .where(eq(trainingSessions.id, sessionId));
+
+        revalidatePath('/coach/sessions');
+        revalidatePath('/bookings');
+        return { success: true, message: 'Présence confirmée' };
+    } catch (error) {
+        return handleActionError(error);
+    }
+}
+
 export async function addSessionCommentAction(data: AddSessionCommentInput) {
     try {
         const user = await requireUserWithPermission(PERMISSIONS.sessions.comment);
@@ -576,7 +687,7 @@ export async function getMemberStatsAction(memberId?: string) {
             .where(and(
                 eq(bookings.memberId, targetId),
                 eq(bookings.status, 'CONFIRMED'),
-                eq(trainingSessions.status, 'COMPLETED')
+                eq(trainingSessions.status, 'completed')
             ));
         const completedSessions = Number(completedSessionsResult[0]?.count || 0);
 

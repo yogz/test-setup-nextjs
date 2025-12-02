@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea'; // Need to check if I have this
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { createSessionFromFormAction } from '@/app/actions/coach-form-actions'; // Reuse or create new?
-
-// Assuming Textarea component exists or I'll use Input for now or create it
-// Let's use Input for description/material for now if Textarea not available, or standard textarea
+import { createSessionFromFormAction } from '@/app/actions/coach-form-actions';
 
 interface Room {
     id: string;
@@ -98,10 +96,11 @@ export function CreateClassModal({ isOpen, onClose, initialDate, rooms, coachNam
             }
 
             await createSessionFromFormAction(formData);
+            toast.success('Cours créé');
             onClose();
         } catch (error) {
             console.error(error);
-            alert('Erreur lors de la création du cours');
+            toast.error('Erreur lors de la création du cours');
         } finally {
             setIsLoading(false);
         }

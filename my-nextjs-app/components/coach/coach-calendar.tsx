@@ -49,6 +49,7 @@ interface CoachCalendarProps {
     rooms: any[];
     members: any[];
     coachName: string;
+    coachId: string;
 }
 
 type CalendarEvent = {
@@ -63,13 +64,13 @@ type CalendarEvent = {
 
 const calendarFormats: Formats = {
     dayHeaderFormat: (date, culture, localizer) =>
-        localizer.format(date, 'EEEE d MMM', culture),
+        localizer?.format(date, 'EEEE d MMM', culture) ?? '',
     dayRangeHeaderFormat: ({ start, end }, culture, localizer) =>
-        `${localizer.format(start, 'd MMM', culture)} – ${localizer.format(end, 'd MMM yyyy', culture)}`,
+        `${localizer?.format(start, 'd MMM', culture) ?? ''} – ${localizer?.format(end, 'd MMM yyyy', culture) ?? ''}`,
     eventTimeRangeFormat: ({ start, end }, culture, localizer) =>
-        `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`,
+        `${localizer?.format(start, 'HH:mm', culture) ?? ''} - ${localizer?.format(end, 'HH:mm', culture) ?? ''}`,
     timeGutterFormat: (date, culture, localizer) =>
-        localizer.format(date, 'HH:mm', culture),
+        localizer?.format(date, 'HH:mm', culture) ?? '',
 };
 
 const calendarMessages: Messages = {
@@ -96,7 +97,8 @@ export function CoachCalendar({
     sessions,
     rooms,
     members,
-    coachName
+    coachName,
+    coachId
 }: CoachCalendarProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null);
@@ -311,6 +313,7 @@ export function CoachCalendar({
                 initialDate={selectedSlot?.date}
                 members={members}
                 rooms={rooms}
+                coachId={coachId}
             />
             <EventDetailsModal
                 isOpen={!!selectedEvent}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { cancelRecurringBookingAction } from '@/app/actions/recurring-booking-actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -58,9 +59,10 @@ export function RecurringBookingsList({ bookings }: RecurringBookingsListProps) 
     });
 
     if (result.success) {
+      toast.success('Réservation annulée');
       router.refresh();
     } else {
-      alert(result.error || 'Erreur lors de l\'annulation');
+      toast.error(result.error || 'Erreur lors de l\'annulation');
     }
 
     setCancellingId(null);

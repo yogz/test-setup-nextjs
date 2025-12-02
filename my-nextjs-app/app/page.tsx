@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { authClient } from '@/lib/auth/client';
 import { Button } from '@/components/ui/button';
 import { GoogleButton } from '@/components/ui/google-button';
@@ -32,8 +33,7 @@ export default function Home() {
           window.location.assign('/dashboard');
         },
         onError: (ctx) => {
-          // Show error message if login fails
-          alert(ctx.error.message);
+          toast.error(ctx.error.message);
         },
       }
     );
@@ -59,7 +59,7 @@ export default function Home() {
           setMagicLinkSent(true);
         },
         onError: (ctx) => {
-          alert(ctx.error.message);
+          toast.error(ctx.error.message);
         },
       }
     );
@@ -82,19 +82,13 @@ export default function Home() {
       console.log('Result:', result);
 
       if (result.success) {
-        setTimeout(() => {
-          alert('✅ Toutes les données de test ont été réinitialisées avec succès !');
-        }, 100);
+        toast.success('Données de test réinitialisées');
       } else {
-        setTimeout(() => {
-          alert('❌ Erreur : ' + result.message);
-        }, 100);
+        toast.error('Erreur : ' + result.message);
       }
     } catch (error) {
       console.error('Error in handleResetTestData:', error);
-      setTimeout(() => {
-        alert('❌ Erreur lors de la réinitialisation des données: ' + (error instanceof Error ? error.message : String(error)));
-      }, 100);
+      toast.error('Erreur lors de la réinitialisation');
     } finally {
       setIsResetting(false);
     }
@@ -109,7 +103,7 @@ export default function Home() {
               Upgrade Coaching
             </CardTitle>
             <CardDescription className="text-center text-sm sm:text-base">
-              Sign in to enter to your account
+              Connectez-vous à votre compte
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -179,15 +173,15 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold">Check your email</h2>
+                <h2 className="text-xl sm:text-2xl font-bold">Vérifiez votre e-mail</h2>
                 <p className="text-sm sm:text-base text-gray-600">
-                  We've sent a magic link to:
+                  Nous avons envoyé un lien magique à :
                 </p>
                 <p className="text-sm sm:text-base font-semibold text-gray-900 break-all">
                   {magicLinkEmail}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-500">
-                  Click the link in the email to sign in to your account.
+                  Cliquez sur le lien dans l'e-mail pour vous connecter.
                 </p>
                 <Button
                   variant="link"
@@ -197,14 +191,14 @@ export default function Home() {
                   }}
                   className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 mt-4"
                 >
-                  ← Back
+                  ← Retour
                 </Button>
               </div>
             ) : (
               <>
                 {/* Google Sign In - Secondary Option */}
                 <GoogleButton onClick={handleGoogleSignIn}>
-                  Sign in with Google
+                  Se connecter avec Google
                 </GoogleButton>
 
                 <div className="relative my-4 sm:my-6">
@@ -212,7 +206,7 @@ export default function Home() {
                     <Separator />
                   </div>
                   <div className="relative flex justify-center text-xs sm:text-sm">
-                    <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Or continue with</span>
+                    <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Ou continuer avec</span>
                   </div>
                 </div>
 
@@ -222,13 +216,13 @@ export default function Home() {
                     <div className="space-y-3">
                       <form onSubmit={handleMagicLinkSignIn} className="space-y-3">
                         <div className="space-y-2">
-                          <Label htmlFor="magic-link-email">Email Address</Label>
+                          <Label htmlFor="magic-link-email">Adresse e-mail</Label>
                           <Input
                             id="magic-link-email"
                             type="email"
                             value={magicLinkEmail}
                             onChange={(e) => setMagicLinkEmail(e.target.value)}
-                            placeholder="your@email.com"
+                            placeholder="votre@email.com"
                             required
                           />
                         </div>
@@ -236,7 +230,7 @@ export default function Home() {
                           <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                           </svg>
-                          Sign in with Magic Link
+                          Se connecter par lien magique
                         </Button>
                       </form>
 
@@ -248,14 +242,14 @@ export default function Home() {
                           onClick={() => setShowMagicLink(true)}
                           className="w-full"
                         >
-                          Or sign in with password →
+                          Ou se connecter avec mot de passe →
                         </Button>
                       </div>
 
                       <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
-                        Don't have an account?{' '}
+                        Pas encore de compte ?{' '}
                         <Link href="/signup" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
-                          Sign up
+                          S'inscrire
                         </Link>
                       </p>
                     </div>
@@ -265,7 +259,7 @@ export default function Home() {
                   <div>
                     <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="login-email">Email</Label>
+                        <Label htmlFor="login-email">E-mail</Label>
                         <Input
                           id="login-email"
                           type="email"
@@ -275,7 +269,7 @@ export default function Home() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="login-password">Password</Label>
+                        <Label htmlFor="login-password">Mot de passe</Label>
                         <Input
                           id="login-password"
                           type="password"
@@ -285,7 +279,7 @@ export default function Home() {
                         />
                       </div>
                       <Button type="submit" className="w-full" size="lg">
-                        Sign In with Password
+                        Se connecter avec mot de passe
                       </Button>
                     </form>
                     <Button
@@ -294,7 +288,7 @@ export default function Home() {
                       onClick={() => setShowMagicLink(false)}
                       className="w-full mt-3 sm:mt-4"
                     >
-                      ← Back to magic link
+                      ← Retour au lien magique
                     </Button>
                   </div>
                 )}

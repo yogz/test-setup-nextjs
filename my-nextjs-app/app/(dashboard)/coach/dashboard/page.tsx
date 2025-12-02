@@ -72,7 +72,7 @@ export default async function CoachDashboardPage() {
                                         {ongoingSession.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </CardDescription>
                                 </div>
-                                <Badge variant={ongoingSession.status === 'COMPLETED' ? 'secondary' : 'default'}>
+                                <Badge variant={ongoingSession.status === 'completed' ? 'secondary' : 'default'}>
                                     {ongoingSession.status}
                                 </Badge>
                             </div>
@@ -108,14 +108,14 @@ export default async function CoachDashboardPage() {
                                     )}
                                 </div>
 
-                                {ongoingSession.status !== 'COMPLETED' && (
+                                {ongoingSession.status !== 'completed' && (
                                     <div className="pt-4 border-t">
                                         <form action={async () => {
                                             'use server';
                                             await confirmSessionAction({ sessionId: ongoingSession.id });
                                         }}>
                                             <Button type="submit" className="w-full sm:w-auto">
-                                                Confirm Session Completed
+                                                Confirmer la séance terminée
                                             </Button>
                                         </form>
                                     </div>

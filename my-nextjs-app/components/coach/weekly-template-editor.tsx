@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { updateCoachSettingsAction, updateWeeklyAvailabilityAction } from '@/app/actions/coach-availability-actions';
 import { generateSessionsFromTemplateAction } from '@/app/actions/generate-sessions-action';
-// import { useToast } from '@/hooks/use-toast'; // Assuming you have a toast hook, or I'll use simple alert for now
 
 // Types
 interface Room {
@@ -182,11 +182,10 @@ export function WeeklyTemplateEditor({ initialSettings, initialAvailability, roo
                 }
                 return updateWeeklyAvailabilityAction(day.dayOfWeek, day.slots);
             }));
-            // Show success message (alert for now)
-            alert('Semaine type sauvegardée !');
+            toast.success('Semaine type sauvegardée !');
         } catch (error) {
             console.error(error);
-            alert('Erreur lors de la sauvegarde');
+            toast.error('Erreur lors de la sauvegarde');
         } finally {
             setIsSaving(false);
         }

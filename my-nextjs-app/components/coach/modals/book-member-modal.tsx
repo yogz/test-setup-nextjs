@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -89,12 +90,12 @@ export function BookMemberModal({
 
     const handleSubmit = async (skipConfirmation = false) => {
         if (bookingType === 'member' && !memberId) {
-            alert('Veuillez sélectionner un membre');
+            toast.error('Veuillez sélectionner un membre');
             return;
         }
 
         if (bookingType === 'trial' && !prospectName) {
-            alert('Veuillez entrer le nom du prospect');
+            toast.error('Veuillez entrer le nom du prospect');
             return;
         }
 
@@ -187,10 +188,11 @@ export function BookMemberModal({
                 await createSessionFromFormAction(formData);
             }
 
+            toast.success('Réservation créée');
             onClose();
         } catch (error) {
             console.error(error);
-            alert('Erreur lors de la réservation');
+            toast.error('Erreur lors de la réservation');
         } finally {
             setIsLoading(false);
         }

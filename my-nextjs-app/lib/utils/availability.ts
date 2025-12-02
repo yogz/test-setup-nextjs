@@ -1,5 +1,3 @@
-import { WeeklyAvailability, BlockedSlot, TrainingSession } from '@/lib/db/schema';
-
 export interface AvailableSlot {
     coachId: string;
     coachName: string | null;

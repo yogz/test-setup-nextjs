@@ -21,6 +21,7 @@ interface WeeklyAvailability {
     isIndividual: boolean;
     isGroup: boolean;
     roomId?: string;
+    duration?: number; // Duration in minutes (optional, uses defaultDuration if not set)
 }
 
 interface BlockedSlot {
@@ -53,6 +54,7 @@ interface Session {
     member?: { id: string; name: string } | null;
     room?: { id: string; name: string } | null;
     isRecurring?: boolean;
+    recurringBookingId?: string | null;
 }
 
 interface DailySlotListProps {
@@ -64,6 +66,7 @@ interface DailySlotListProps {
     members: any[];
     coachName: string;
     coachId: string;
+    defaultDuration?: number; // Default session duration in minutes
 }
 
 type SlotStatus = 'FREE' | 'BLOCKED' | 'BOOKED' | 'EXCEPTIONAL';
@@ -90,7 +93,8 @@ export function DailySlotList({
     rooms,
     members,
     coachName,
-    coachId
+    coachId,
+    defaultDuration = 60
 }: DailySlotListProps) {
     const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null);
     const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -169,9 +173,8 @@ export function DailySlotList({
             let currentSlotTime = setMinutes(setHours(date, startHour), startMinute);
             const endTime = setMinutes(setHours(date, endHour), endMinute);
 
-            // Calculate slot duration from availability or fallback to calculated duration
-            const slotDuration = avail.duration ||
-                ((endHour * 60 + endMinute) - (startHour * 60 + startMinute));
+            // Calculate slot duration: use availability duration if set, otherwise use defaultDuration
+            const slotDuration = avail.duration || defaultDuration;
 
             while (isBefore(currentSlotTime, endTime)) {
                 const timeStr = format(currentSlotTime, 'HH:mm');
@@ -218,8 +221,8 @@ export function DailySlotList({
             const addStart = new Date(addition.startTime);
             const addEnd = new Date(addition.endTime);
 
-            // Calculate duration for exceptional slots (default to 60 if not available)
-            const exceptionalDuration = 60; // TODO: Add duration field to availabilityAdditions table if needed
+            // Use defaultDuration for exceptional slots
+            const exceptionalDuration = defaultDuration;
 
             let currentSlotTime = addStart;
 
@@ -505,6 +508,7 @@ export function DailySlotList({
                 members={members}
                 rooms={rooms}
                 coachId={coachId}
+                defaultDuration={defaultDuration}
             />
 
             {/* Action Menu */}
@@ -536,13 +540,15 @@ export function DailySlotList({
                         start: selectedEvent.session?.startTime ? new Date(selectedEvent.session.startTime) : new Date(selectedEvent.block!.startTime),
                         end: selectedEvent.session?.endTime ? new Date(selectedEvent.session.endTime) : new Date(selectedEvent.block!.endTime),
                         type: selectedEvent.session?.type || 'BLOCKED',
+                        status: selectedEvent.session?.status,
                         session: selectedEvent.session ? {
                             id: selectedEvent.session.id,
                             capacity: selectedEvent.session.capacity,
                             bookings: selectedEvent.session.bookings,
                             description: selectedEvent.session.title,
                             room: selectedEvent.session.room,
-                            member: selectedEvent.session.member
+                            member: selectedEvent.session.member,
+                            status: selectedEvent.session.status
                         } : undefined,
                         block: selectedEvent.block ? {
                             id: selectedEvent.block.id,

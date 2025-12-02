@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { authClient } from '@/lib/auth/client';
 import { Button } from '@/components/ui/button';
 import { GoogleButton } from '@/components/ui/google-button';
@@ -30,8 +31,7 @@ export default function SignInPage() {
                     window.location.href = '/dashboard';
                 },
                 onError: (ctx) => {
-                    // Show error message if signin fails
-                    alert(ctx.error.message);
+                    toast.error(ctx.error.message);
                     setIsLoading(false);
                 },
             }
@@ -51,17 +51,17 @@ export default function SignInPage() {
                 <Card className="p-6 sm:p-8">
                     <CardHeader className="p-0 mb-6">
                         <CardTitle className="text-2xl sm:text-3xl md:text-4xl text-center">
-                            Welcome Back
+                            Bon retour !
                         </CardTitle>
                         <CardDescription className="text-center text-sm sm:text-base">
-                            Sign in to your account
+                            Connectez-vous à votre compte
                         </CardDescription>
                     </CardHeader>
 
                     <CardContent className="p-0 space-y-3">
                         {/* Google Sign In - Primary Option */}
                         <GoogleButton onClick={handleGoogleSignIn}>
-                            Sign in with Google
+                            Se connecter avec Google
                         </GoogleButton>
 
                         <div className="relative my-4 sm:my-6">
@@ -69,13 +69,13 @@ export default function SignInPage() {
                                 <Separator />
                             </div>
                             <div className="relative flex justify-center text-xs sm:text-sm">
-                                <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Or</span>
+                                <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Ou</span>
                             </div>
                         </div>
 
                         <form onSubmit={handleSignIn} className="space-y-3 sm:space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="signin-email">Email</Label>
+                                <Label htmlFor="signin-email">E-mail</Label>
                                 <Input
                                     id="signin-email"
                                     type="email"
@@ -86,12 +86,12 @@ export default function SignInPage() {
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="signin-password">Password</Label>
+                                    <Label htmlFor="signin-password">Mot de passe</Label>
                                     <Link
                                         href="/forgot-password"
                                         className="text-xs text-blue-600 hover:underline"
                                     >
-                                        Forgot password?
+                                        Mot de passe oublié ?
                                     </Link>
                                 </div>
                                 <Input
@@ -103,14 +103,14 @@ export default function SignInPage() {
                                 />
                             </div>
                             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                                {isLoading ? 'Signing in...' : 'Sign In'}
+                                {isLoading ? 'Connexion...' : 'Se connecter'}
                             </Button>
                         </form>
 
                         <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
-                            Don't have an account?{' '}
+                            Pas encore de compte ?{' '}
                             <Link href="/signup" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
-                                Sign up
+                                S'inscrire
                             </Link>
                         </p>
                     </CardContent>

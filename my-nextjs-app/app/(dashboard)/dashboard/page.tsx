@@ -4,6 +4,7 @@ import { useSession } from '@/lib/auth/client';
 import { authClient } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -100,13 +101,13 @@ export default function DashboardPage() {
         throw new Error('Failed to update profile');
       }
 
-      setSaveMessage('Profile updated successfully!');
+      setSaveMessage('Profil mis à jour avec succès !');
       setIsEditing(false);
 
       // Refresh the session to get updated data
       window.location.reload();
     } catch (error: any) {
-      setSaveMessage(error.message || 'Failed to update profile');
+      setSaveMessage(error.message || 'Échec de la mise à jour du profil');
     } finally {
       setIsSaving(false);
     }
@@ -133,13 +134,13 @@ export default function DashboardPage() {
     try {
       const result = await resetDatabaseAction();
       if (result.success) {
-        alert('✅ Base de données réinitialisée avec succès !');
+        toast.success('Base de données réinitialisée avec succès !');
         window.location.reload();
       } else {
-        alert('❌ Erreur: ' + result.error);
+        toast.error('Erreur: ' + result.error);
       }
     } catch (error) {
-      alert('❌ Erreur lors de la réinitialisation');
+      toast.error('Erreur lors de la réinitialisation');
     } finally {
       setIsResetting(false);
     }
@@ -169,14 +170,14 @@ export default function DashboardPage() {
         {/* Header */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Welcome back, {session.user.name || session.user.email}!</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Tableau de bord</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Bon retour, {session.user.name || session.user.email} !</p>
           </div>
           <Button
             onClick={handleSignOut}
             className="w-full sm:w-auto"
           >
-            Sign Out
+            Déconnexion
           </Button>
         </header>
 
@@ -214,13 +215,13 @@ export default function DashboardPage() {
         <Card className="mb-6 sm:mb-8">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <CardTitle className="text-xl sm:text-2xl">Profile Information</CardTitle>
+              <CardTitle className="text-xl sm:text-2xl">Informations du profil</CardTitle>
               {!isEditing && (
                 <Button
                   onClick={() => setIsEditing(true)}
                   className="w-full sm:w-auto"
                 >
-                  Edit Profile
+                  Modifier le profil
                 </Button>
               )}
             </div>
@@ -228,8 +229,8 @@ export default function DashboardPage() {
 
           <CardContent>
             {saveMessage && (
-              <Alert className={`mb-4 ${saveMessage.includes('success') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                <AlertDescription className={saveMessage.includes('success') ? 'text-green-800' : 'text-red-800'}>
+              <Alert className={`mb-4 ${saveMessage.includes('succès') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <AlertDescription className={saveMessage.includes('succès') ? 'text-green-800' : 'text-red-800'}>
                   {saveMessage}
                 </AlertDescription>
               </Alert>
@@ -253,24 +254,24 @@ export default function DashboardPage() {
                 {/* User Information Display */}
                 <div className="space-y-4 flex-1">
                   <div>
-                    <Label className="text-gray-500">Name</Label>
-                    <p className="text-lg mt-1">{session.user.name || 'Not set'}</p>
+                    <Label className="text-gray-500">Nom</Label>
+                    <p className="text-lg mt-1">{session.user.name || 'Non défini'}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500">Email</Label>
+                    <Label className="text-gray-500">E-mail</Label>
                     <p className="text-lg mt-1">{session.user.email}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500">Date of Birth</Label>
-                    <p className="text-lg mt-1">{(session.user as any).dateOfBirth || 'Not set'}</p>
+                    <Label className="text-gray-500">Date de naissance</Label>
+                    <p className="text-lg mt-1">{(session.user as any).dateOfBirth || 'Non défini'}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500">Sex</Label>
-                    <p className="text-lg mt-1">{(session.user as any).sex || 'Not set'}</p>
+                    <Label className="text-gray-500">Sexe</Label>
+                    <p className="text-lg mt-1">{(session.user as any).sex || 'Non défini'}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500">Phone</Label>
-                    <p className="text-lg mt-1">{(session.user as any).phone || 'Not set'}</p>
+                    <Label className="text-gray-500">Téléphone</Label>
+                    <p className="text-lg mt-1">{(session.user as any).phone || 'Non défini'}</p>
                   </div>
                 </div>
               </div>
@@ -293,17 +294,17 @@ export default function DashboardPage() {
                   {/* Edit Form */}
                   <div className="space-y-4 flex-1">
                     <div className="space-y-2">
-                      <Label htmlFor="dashboard-name">Name</Label>
+                      <Label htmlFor="dashboard-name">Nom</Label>
                       <Input
                         id="dashboard-name"
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter your name"
+                        placeholder="Entrez votre nom"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="dashboard-dob">Date of Birth</Label>
+                      <Label htmlFor="dashboard-dob">Date de naissance</Label>
                       <Input
                         id="dashboard-dob"
                         type="date"
@@ -312,24 +313,24 @@ export default function DashboardPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="dashboard-sex">Sex</Label>
+                      <Label htmlFor="dashboard-sex">Sexe</Label>
                       <Select
                         value={sex}
                         onValueChange={(value) => setSex(value)}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select..." />
+                          <SelectValue placeholder="Sélectionner..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="non-binary">Non-binary</SelectItem>
-                          <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                          <SelectItem value="male">Homme</SelectItem>
+                          <SelectItem value="female">Femme</SelectItem>
+                          <SelectItem value="non-binary">Non-binaire</SelectItem>
+                          <SelectItem value="prefer-not-to-say">Préfère ne pas dire</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="dashboard-phone">Phone</Label>
+                      <Label htmlFor="dashboard-phone">Téléphone</Label>
                       <Input
                         id="dashboard-phone"
                         type="tel"
@@ -361,7 +362,7 @@ export default function DashboardPage() {
                         }}
                         placeholder="+33 6 12 34 56 78"
                       />
-                      <p className="mt-1 text-xs text-gray-500">International format (e.g., +33 6 12 34 56 78, +1 555 123 4567)</p>
+                      <p className="mt-1 text-xs text-gray-500">Format international (ex: +33 6 12 34 56 78)</p>
                     </div>
                   </div>
                 </div>
@@ -375,14 +376,14 @@ export default function DashboardPage() {
                     disabled={isSaving}
                     className="order-2 sm:order-1"
                   >
-                    Cancel
+                    Annuler
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSaving}
                     className="order-1 sm:order-2"
                   >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {isSaving ? 'Enregistrement...' : 'Enregistrer'}
                   </Button>
                 </div>
               </form>
@@ -394,8 +395,8 @@ export default function DashboardPage() {
         {(can(PERMISSIONS.users.update) || can(PERMISSIONS.users.updateOwn)) && (
           <Card className="mb-6 sm:mb-8">
             <CardHeader>
-              <CardTitle className="text-xl sm:text-2xl">Quick Actions</CardTitle>
-              <CardDescription>Manage your account and settings</CardDescription>
+              <CardTitle className="text-xl sm:text-2xl">Actions rapides</CardTitle>
+              <CardDescription>Gérez votre compte et vos paramètres</CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/users">
@@ -403,7 +404,7 @@ export default function DashboardPage() {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  {can(PERMISSIONS.users.update) ? 'Manage Users' : 'View My Profile'}
+                  {can(PERMISSIONS.users.update) ? 'Gérer les utilisateurs' : 'Voir mon profil'}
                 </Button>
               </Link>
             </CardContent>
@@ -418,12 +419,12 @@ export default function DashboardPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                Account
+                Compte
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p><span className="font-medium text-gray-600">Email:</span> {session.user.email}</p>
-              <p><span className="font-medium text-gray-600">User ID:</span> <span className="text-xs">{session.user.id.slice(0, 16)}...</span></p>
+              <p><span className="font-medium text-gray-600">E-mail :</span> {session.user.email}</p>
+              <p><span className="font-medium text-gray-600">ID utilisateur :</span> <span className="text-xs">{session.user.id.slice(0, 16)}...</span></p>
             </CardContent>
           </Card>
 
@@ -437,8 +438,8 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p><span className="font-medium text-gray-600">Expires:</span> {new Date(session.session.expiresAt).toLocaleDateString()}</p>
-              <p><span className="font-medium text-gray-600">Created:</span> {new Date(session.user.createdAt).toLocaleDateString()}</p>
+              <p><span className="font-medium text-gray-600">Expire :</span> {new Date(session.session.expiresAt).toLocaleDateString('fr-FR')}</p>
+              <p><span className="font-medium text-gray-600">Créé :</span> {new Date(session.user.createdAt).toLocaleDateString('fr-FR')}</p>
               {process.env.NODE_ENV === 'development' && (
                 <div className="pt-2 border-t border-red-200">
                   <Button
@@ -461,12 +462,12 @@ export default function DashboardPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
-                Status
+                Statut
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p><span className="font-medium text-gray-600">Email Verified:</span> {session.user.emailVerified ? '✓ Yes' : '✗ No'}</p>
-              <p><span className="font-medium text-gray-600">Account:</span> Active</p>
+              <p><span className="font-medium text-gray-600">E-mail vérifié :</span> {session.user.emailVerified ? '✓ Oui' : '✗ Non'}</p>
+              <p><span className="font-medium text-gray-600">Compte :</span> Actif</p>
             </CardContent>
           </Card>
         </div>

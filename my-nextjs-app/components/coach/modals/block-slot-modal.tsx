@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,11 +50,11 @@ export function BlockSlotModal({ isOpen, onClose, initialDate, initialStartTime 
     const handleSubmit = async () => {
         // Validation
         if (!startDate) {
-            alert('Veuillez sélectionner une date de début');
+            toast.error('Veuillez sélectionner une date de début');
             return;
         }
         if (mode === 'PERIOD' && !endDate) {
-            alert('Veuillez sélectionner une date de fin');
+            toast.error('Veuillez sélectionner une date de fin');
             return;
         }
 
@@ -87,21 +88,22 @@ export function BlockSlotModal({ isOpen, onClose, initialDate, initialStartTime 
 
             // Validation: check if dates are valid
             if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                alert('Dates invalides');
+                toast.error('Dates invalides');
                 return;
             }
 
             if (end <= start) {
-                alert('La fin doit être après le début');
+                toast.error('La fin doit être après le début');
                 return;
             }
 
             await blockSlotAction(start, end, reason);
+            toast.success('Créneau bloqué');
             onClose();
-            router.refresh(); // Rafraîchir la page pour afficher le nouveau créneau bloqué
+            router.refresh();
         } catch (error) {
             console.error(error);
-            alert('Erreur lors du blocage du créneau');
+            toast.error('Erreur lors du blocage du créneau');
         } finally {
             setIsLoading(false);
         }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -78,7 +79,7 @@ export default function OnboardingPage() {
       window.location.href = '/dashboard';
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
-      alert('Failed to save your information. Please try again.');
+      toast.error('Échec de la sauvegarde. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }
@@ -95,10 +96,10 @@ export default function OnboardingPage() {
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs sm:text-sm font-medium text-gray-700">
-              Step {step} of 3
+              Étape {step} sur 3
             </span>
             <span className="text-xs sm:text-sm font-medium text-black">
-              {Math.round((step / 3) * 100)}% Complete
+              {Math.round((step / 3) * 100)}% complété
             </span>
           </div>
           <Progress value={(step / 3) * 100} className="h-2" />
@@ -107,10 +108,10 @@ export default function OnboardingPage() {
         {/* Welcome Header */}
         <CardHeader className="p-0 mb-6 sm:mb-8">
           <CardTitle className="text-2xl sm:text-3xl text-center">
-            Welcome to Upgrade Coaching!
+            Bienvenue chez Upgrade Coaching !
           </CardTitle>
           <CardDescription className="text-sm sm:text-base text-center">
-            Let's get to know you better to personalize your experience
+            Faisons connaissance pour personnaliser votre expérience
           </CardDescription>
         </CardHeader>
 
@@ -120,7 +121,7 @@ export default function OnboardingPage() {
         {step === 1 && (
           <div className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="onboarding-name">What's your name?</Label>
+              <Label htmlFor="onboarding-name">Quel est votre nom ?</Label>
               <Input
                 id="onboarding-name"
                 type="text"
@@ -128,7 +129,7 @@ export default function OnboardingPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="Enter your full name"
+                placeholder="Entrez votre nom complet"
                 autoFocus
                 className="text-base sm:text-lg"
               />
@@ -139,7 +140,7 @@ export default function OnboardingPage() {
               className="w-full"
               size="lg"
             >
-              Continue
+              Continuer
             </Button>
           </div>
         )}
@@ -149,7 +150,7 @@ export default function OnboardingPage() {
           <div className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
               <Label htmlFor="onboarding-dob">
-                When were you born? <span className="text-gray-500 font-normal">(optional)</span>
+                Quelle est votre date de naissance ? <span className="text-gray-500 font-normal">(optionnel)</span>
               </Label>
               <Input
                 id="onboarding-dob"
@@ -169,7 +170,7 @@ export default function OnboardingPage() {
                 className="flex-1"
                 size="lg"
               >
-                Back
+                Retour
               </Button>
               <Button
                 onClick={handleNext}
@@ -177,7 +178,7 @@ export default function OnboardingPage() {
                 className="flex-1"
                 size="lg"
               >
-                Continue
+                Continuer
               </Button>
             </div>
           </div>
@@ -188,7 +189,7 @@ export default function OnboardingPage() {
           <div className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
               <Label htmlFor="onboarding-sex">
-                How do you identify? <span className="text-gray-500 font-normal">(optional)</span>
+                Comment vous identifiez-vous ? <span className="text-gray-500 font-normal">(optionnel)</span>
               </Label>
               <Select
                 value={formData.sex}
@@ -197,19 +198,19 @@ export default function OnboardingPage() {
                 }
               >
                 <SelectTrigger className="w-full text-base sm:text-lg">
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue placeholder="Sélectionner..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="non-binary">Non-binary</SelectItem>
-                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                  <SelectItem value="male">Homme</SelectItem>
+                  <SelectItem value="female">Femme</SelectItem>
+                  <SelectItem value="non-binary">Non-binaire</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Préfère ne pas dire</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="onboarding-phone">
-                Phone number <span className="text-gray-500 font-normal">(optional)</span>
+                Numéro de téléphone <span className="text-gray-500 font-normal">(optionnel)</span>
               </Label>
               <Input
                 id="onboarding-phone"
@@ -243,7 +244,7 @@ export default function OnboardingPage() {
                 placeholder="+33 6 12 34 56 78"
                 className="text-base sm:text-lg"
               />
-              <p className="mt-1 text-xs text-gray-500">International format (e.g., +33 6 12 34 56 78, +1 555 123 4567)</p>
+              <p className="mt-1 text-xs text-gray-500">Format international (ex: +33 6 12 34 56 78)</p>
             </div>
             <div className="flex gap-3">
               <Button
@@ -252,7 +253,7 @@ export default function OnboardingPage() {
                 className="flex-1"
                 size="lg"
               >
-                Back
+                Retour
               </Button>
               <Button
                 onClick={handleComplete}
@@ -282,10 +283,10 @@ export default function OnboardingPage() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       />
                     </svg>
-                    Saving...
+                    Enregistrement...
                   </>
                 ) : (
-                  'Complete Setup'
+                  'Terminer la configuration'
                 )}
               </Button>
             </div>
@@ -311,7 +312,7 @@ export default function OnboardingPage() {
             }}
             className="text-xs sm:text-sm"
           >
-            Skip for now
+            Passer pour l'instant
           </Button>
         </div>
         </CardContent>

@@ -178,7 +178,7 @@ export const trainingSessions = pgTable('training_sessions', {
 
   // NEW FIELDS for tracking origin
   recurringBookingId: text('recurring_booking_id').references(() => recurringBookings.id, { onDelete: 'cascade' }),
-  oneTimeBookingId: text('one_time_booking_id').references(() => bookings.id, { onDelete: 'cascade' }),
+  oneTimeBookingId: text('one_time_booking_id'), // Reference to bookings - no FK to avoid circular reference
   memberId: text('member_id').references(() => users.id), // Direct member reference for quick queries
 
   createdAt: timestamp('created_at').defaultNow().notNull(),

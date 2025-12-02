@@ -70,6 +70,7 @@ export function CoachSessionsView({
                             members={allMembers}
                             coachName={coachName}
                             coachId={coachId}
+                            defaultDuration={settings?.defaultDuration || 60}
                         />
                     </TabsContent>
 
