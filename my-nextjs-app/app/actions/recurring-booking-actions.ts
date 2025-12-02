@@ -289,6 +289,68 @@ export async function getMyRecurringBookingsAction() {
 // GENERATE SESSIONS FOR RECURRING BOOKING
 // ============================================================================
 
+// ============================================================================
+// CANCEL A SINGLE RECURRING SESSION
+// ============================================================================
+
+export async function cancelRecurringSessionAction(data: { sessionId: string }) {
+  try {
+    const user = await getAuthenticatedUser();
+    const { sessionId } = data;
+
+    // 1. Find the session
+    const session = await db.query.trainingSessions.findFirst({
+      where: eq(trainingSessions.id, sessionId),
+    });
+
+    if (!session) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    // 2. Verify ownership
+    if (session.memberId !== user.id && user.role !== 'owner' && user.role !== 'coach') {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // 3. Check if session is in the future
+    if (session.startTime < new Date()) {
+      return { success: false, error: 'Cannot cancel past sessions' };
+    }
+
+    // 4. Cancel the session
+    await db.update(trainingSessions)
+      .set({ status: 'cancelled' })
+      .where(eq(trainingSessions.id, sessionId));
+
+    // 5. Also cancel any associated bookings
+    await db.update(bookings)
+      .set({
+        status: 'CANCELLED_BY_MEMBER',
+        cancelledAt: new Date()
+      })
+      .where(and(
+        eq(bookings.sessionId, sessionId),
+        eq(bookings.status, 'CONFIRMED')
+      ));
+
+    revalidatePath('/bookings');
+    revalidatePath('/member/recurring-bookings');
+    revalidatePath('/coach/sessions');
+
+    return {
+      success: true,
+      message: 'Session cancelled successfully'
+    };
+  } catch (error) {
+    console.error('Cancel recurring session error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+// ============================================================================
+// GENERATE SESSIONS FOR RECURRING BOOKING
+// ============================================================================
+
 export async function generateSessionsForRecurringBooking(
   recurringBookingId: string,
   weeksAhead: number = 6
@@ -398,9 +460,19 @@ export async function generateSessionsForRecurringBooking(
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // 5. Insert sessions
+    // 5. Insert sessions AND bookings
     if (sessionsToCreate.length > 0) {
-      await db.insert(trainingSessions).values(sessionsToCreate);
+      // Insert sessions and get their IDs
+      const insertedSessions = await db.insert(trainingSessions).values(sessionsToCreate).returning({ id: trainingSessions.id });
+
+      // Create corresponding bookings for each session
+      const bookingsToCreate = insertedSessions.map(session => ({
+        sessionId: session.id,
+        memberId: booking.memberId,
+        status: 'CONFIRMED' as const,
+      }));
+
+      await db.insert(bookings).values(bookingsToCreate);
     }
 
     return {

@@ -116,6 +116,32 @@ export function DailySlotList({
         return Array.from({ length: Math.min(daysToShow, maxDays) }, (_, i) => addDays(today, i));
     }, [daysToShow]);
 
+    // Pre-compute occupied time slots using Sets for O(1) lookup
+    const occupiedSlotsMap = useMemo(() => {
+        const sessionsMap = new Map<number, Session>();
+        const blockedMap = new Map<number, BlockedSlot>();
+
+        // Index sessions by their time range (every 15-min interval)
+        sessions.forEach(s => {
+            const start = new Date(s.startTime).getTime();
+            const end = new Date(s.endTime).getTime();
+            for (let t = start; t < end; t += 15 * 60 * 1000) {
+                sessionsMap.set(t, s);
+            }
+        });
+
+        // Index blocked slots by their time range
+        blockedSlots.forEach(b => {
+            const start = new Date(b.startTime).getTime();
+            const end = new Date(b.endTime).getTime();
+            for (let t = start; t < end; t += 15 * 60 * 1000) {
+                blockedMap.set(t, b);
+            }
+        });
+
+        return { sessions: sessionsMap, blocked: blockedMap };
+    }, [sessions, blockedSlots]);
+
     // Load more days when sentinel is visible
     const loadMoreDays = useCallback(() => {
         if (daysToShow >= maxDays || isLoadingMore) return;
@@ -150,8 +176,10 @@ export function DailySlotList({
         };
     }, [loadMoreDays]);
 
-    const getSlotsForDay = (date: Date) => {
+    // Optimized getSlotsForDay using Map lookups (O(1) instead of O(n))
+    const getSlotsForDay = useCallback((date: Date) => {
         const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const { sessions: sessionsMap, blocked: blockedMap } = occupiedSlotsMap;
 
         // Find availability for this day (weekly template)
         const dayAvailability = weeklyAvailability.filter(a => a.dayOfWeek === dayOfWeek);
@@ -165,6 +193,24 @@ export function DailySlotList({
         if (dayAvailability.length === 0 && exceptionalAvailability.length === 0) return [];
 
         const slots: DailySlot[] = [];
+        const slotsTimeIndex = new Map<string, number>(); // For quick duplicate check
+
+        // Helper to find session/block using O(1) Map lookup
+        const findSessionForSlot = (slotStart: Date, slotEnd: Date): Session | undefined => {
+            for (let t = slotStart.getTime(); t < slotEnd.getTime(); t += 15 * 60 * 1000) {
+                const session = sessionsMap.get(t);
+                if (session) return session;
+            }
+            return undefined;
+        };
+
+        const findBlockForSlot = (slotStart: Date, slotEnd: Date): BlockedSlot | undefined => {
+            for (let t = slotStart.getTime(); t < slotEnd.getTime(); t += 15 * 60 * 1000) {
+                const block = blockedMap.get(t);
+                if (block) return block;
+            }
+            return undefined;
+        };
 
         dayAvailability.forEach(avail => {
             const [startHour, startMinute] = avail.startTime.split(':').map(Number);
@@ -180,24 +226,16 @@ export function DailySlotList({
                 const timeStr = format(currentSlotTime, 'HH:mm');
                 const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + slotDuration);
 
-                // Check for sessions
-                const session = sessions.find(s => {
-                    const sStart = new Date(s.startTime);
-                    const sEnd = new Date(s.endTime);
-                    // Check overlap
-                    return (sStart < slotEnd && sEnd > currentSlotTime);
-                });
-
-                // Check for blocks
-                const block = blockedSlots.find(b => {
-                    const bStart = new Date(b.startTime);
-                    const bEnd = new Date(b.endTime);
-                    return (bStart < slotEnd && bEnd > currentSlotTime);
-                });
+                // O(1) lookups using Maps
+                const session = findSessionForSlot(currentSlotTime, slotEnd);
+                const block = findBlockForSlot(currentSlotTime, slotEnd);
 
                 let status: SlotStatus = 'FREE';
                 if (session) status = 'BOOKED';
                 else if (block) status = 'BLOCKED';
+
+                const slotIndex = slots.length;
+                slotsTimeIndex.set(timeStr, slotIndex);
 
                 slots.push({
                     time: timeStr,
@@ -208,7 +246,7 @@ export function DailySlotList({
                     isIndividual: avail.isIndividual,
                     isGroup: avail.isGroup,
                     roomId: session?.roomId || avail.roomId,
-                    isRecurring: session?.recurringBookingId ? true : false, // Only recurring if session has recurringBookingId
+                    isRecurring: session?.recurringBookingId ? true : false,
                     duration: slotDuration,
                 });
 
@@ -230,31 +268,17 @@ export function DailySlotList({
                 const timeStr = format(currentSlotTime, 'HH:mm');
                 const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + exceptionalDuration);
 
-                // Check for sessions
-                const session = sessions.find(s => {
-                    const sStart = new Date(s.startTime);
-                    const sEnd = new Date(s.endTime);
-                    return (sStart < slotEnd && sEnd > currentSlotTime);
-                });
-
-                // Check for blocks
-                const block = blockedSlots.find(b => {
-                    const bStart = new Date(b.startTime);
-                    const bEnd = new Date(b.endTime);
-                    return (bStart < slotEnd && bEnd > currentSlotTime);
-                });
+                // O(1) lookups using Maps
+                const session = findSessionForSlot(currentSlotTime, slotEnd);
+                const block = findBlockForSlot(currentSlotTime, slotEnd);
 
                 let status: SlotStatus = 'EXCEPTIONAL';
                 if (session) status = 'BOOKED';
                 else if (block) status = 'BLOCKED';
 
-                // Check if this slot already exists (e.g. from weekly availability)
-                // If it does, we might want to override it or skip.
-                // Usually exceptional availability overrides weekly.
-                // But here we are just adding to the list.
-                // Let's check if a slot at this time already exists.
-                const existingSlotIndex = slots.findIndex(s => s.time === timeStr);
-                if (existingSlotIndex >= 0) {
+                // O(1) check if slot already exists
+                const existingSlotIndex = slotsTimeIndex.get(timeStr);
+                if (existingSlotIndex !== undefined) {
                     // Replace existing slot with exceptional one
                     slots[existingSlotIndex] = {
                         time: timeStr,
@@ -266,10 +290,12 @@ export function DailySlotList({
                         isGroup: addition.isGroup,
                         roomId: session?.roomId || addition.roomId,
                         isExceptional: true,
-                        isRecurring: session?.recurringBookingId ? true : false, // Only recurring if session has recurringBookingId
+                        isRecurring: session?.recurringBookingId ? true : false,
                         duration: exceptionalDuration,
                     };
                 } else {
+                    const slotIndex = slots.length;
+                    slotsTimeIndex.set(timeStr, slotIndex);
                     slots.push({
                         time: timeStr,
                         date: currentSlotTime,
@@ -280,7 +306,7 @@ export function DailySlotList({
                         isGroup: addition.isGroup,
                         roomId: session?.roomId || addition.roomId,
                         isExceptional: true,
-                        isRecurring: session?.recurringBookingId ? true : false, // Only recurring if session has recurringBookingId
+                        isRecurring: session?.recurringBookingId ? true : false,
                         duration: exceptionalDuration,
                     });
                 }
@@ -306,22 +332,22 @@ export function DailySlotList({
                 const timeStr = format(currentSlotTime, 'HH:mm');
                 const slotEnd = setMinutes(currentSlotTime, currentSlotTime.getMinutes() + 60);
 
-                // Check if slot already exists
-                const existingSlot = slots.find(s => s.time === timeStr);
-
-                if (!existingSlot) {
+                // O(1) check if slot already exists
+                if (!slotsTimeIndex.has(timeStr)) {
+                    const slotIndex = slots.length;
+                    slotsTimeIndex.set(timeStr, slotIndex);
                     slots.push({
                         time: timeStr,
                         date: currentSlotTime,
                         status: 'BLOCKED',
                         session: undefined,
                         block: block,
-                        isIndividual: false, // Default
-                        isGroup: false,      // Default
+                        isIndividual: false,
+                        isGroup: false,
                         roomId: undefined,
                         isExceptional: false,
-                        isRecurring: false, // Blocked slots are not recurring
-                        duration: 60, // Default duration for blocked slots
+                        isRecurring: false,
+                        duration: 60,
                     });
                 }
 
@@ -330,7 +356,7 @@ export function DailySlotList({
         });
 
         return slots.sort((a, b) => a.time.localeCompare(b.time));
-    };
+    }, [weeklyAvailability, availabilityAdditions, blockedSlots, occupiedSlotsMap, defaultDuration]);
 
     const handleSlotClick = (slot: DailySlot) => {
         if (slot.status === 'FREE' || slot.status === 'EXCEPTIONAL') {

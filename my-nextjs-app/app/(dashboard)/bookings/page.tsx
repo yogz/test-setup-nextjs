@@ -3,12 +3,12 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { bookings } from '@/lib/db/schema';
-import { eq, desc, and, gte, lt } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Repeat } from 'lucide-react';
 import { cancelBookingAction } from '@/app/actions/gym-actions';
 
 export default async function BookingsPage() {
@@ -22,7 +22,7 @@ export default async function BookingsPage() {
 
     const now = new Date();
 
-    // Fetch all user bookings
+    // Fetch all user bookings (ponctuelles ET récurrentes via la relation session)
     const userBookings = await db.query.bookings.findMany({
         where: eq(bookings.memberId, session.user.id),
         orderBy: [desc(bookings.createdAt)],
@@ -38,10 +38,10 @@ export default async function BookingsPage() {
 
     // Separate into upcoming and past bookings
     const upcomingBookings = userBookings.filter(
-        b => b.status === 'CONFIRMED' && new Date((b.session as any).startTime) >= now
+        b => b.status === 'CONFIRMED' && new Date(b.session.startTime) >= now
     );
     const pastBookings = userBookings.filter(
-        b => b.status === 'CONFIRMED' && new Date((b.session as any).startTime) < now
+        b => b.status === 'CONFIRMED' && new Date(b.session.startTime) < now
     );
     const cancelledBookings = userBookings.filter(
         b => b.status === 'CANCELLED_BY_MEMBER' || b.status === 'CANCELLED_BY_COACH'
@@ -50,6 +50,7 @@ export default async function BookingsPage() {
     const BookingCard = ({ booking }: { booking: typeof userBookings[0] }) => {
         const isPast = new Date(booking.session.startTime) < now;
         const isCancelled = booking.status === 'CANCELLED_BY_MEMBER' || booking.status === 'CANCELLED_BY_COACH';
+        const isRecurring = !!booking.session.recurringBookingId;
 
         return (
             <Card key={booking.id}>
@@ -70,8 +71,11 @@ export default async function BookingsPage() {
                             {isCancelled && (
                                 <Badge variant="destructive">Annulée</Badge>
                             )}
-                            {booking.session.isRecurring && (
-                                <Badge variant="outline">Récurrent</Badge>
+                            {isRecurring && (
+                                <Badge variant="default" className="bg-violet-600 hover:bg-violet-700">
+                                    <Repeat className="h-3 w-3 mr-1" />
+                                    Récurrent
+                                </Badge>
                             )}
                         </div>
                     </div>

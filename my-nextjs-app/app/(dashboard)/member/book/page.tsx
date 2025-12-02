@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { users, weeklyAvailability, blockedSlots, trainingSessions, coachSettings } from '@/lib/db/schema';
-import { eq, and, gte, ne, or } from 'drizzle-orm';
+import { eq, and, gte, lte, ne, or } from 'drizzle-orm';
 import { MemberBookingView } from '@/components/member/member-booking-view';
 
 export default async function MemberBookPage() {
@@ -15,10 +15,10 @@ export default async function MemberBookPage() {
         redirect('/sign-in');
     }
 
-    // Fetch date range for availability lookup
+    // Fetch date range for availability lookup - only 3 weeks ahead for initial load
     const now = new Date();
-    const threeMonthsAhead = new Date(now);
-    threeMonthsAhead.setMonth(threeMonthsAhead.getMonth() + 3);
+    const threeWeeksAhead = new Date(now);
+    threeWeeksAhead.setDate(threeWeeksAhead.getDate() + 21);
 
     // Get all coaches with their availability
     const coaches = await db.query.users.findMany({
@@ -29,20 +29,33 @@ export default async function MemberBookPage() {
         },
     });
 
-    // Get blocked slots for all coaches
+    // Get blocked slots for all coaches (only for the next 3 weeks)
     const allBlockedSlots = await db.query.blockedSlots.findMany({
-        where: gte(blockedSlots.startTime, now),
+        where: and(
+            gte(blockedSlots.startTime, now),
+            lte(blockedSlots.startTime, threeWeeksAhead)
+        ),
     });
 
-    // Get existing sessions (to show what's already booked)
+    // Get existing sessions (only next 3 weeks, without heavy relations)
     const existingSessions = await db.query.trainingSessions.findMany({
         where: and(
             gte(trainingSessions.startTime, now),
+            lte(trainingSessions.startTime, threeWeeksAhead),
             ne(trainingSessions.status, 'cancelled')
         ),
+        columns: {
+            id: true,
+            coachId: true,
+            startTime: true,
+            endTime: true,
+            type: true,
+            capacity: true,
+        },
         with: {
-            coach: true,
-            bookings: true,
+            bookings: {
+                columns: { id: true },
+            },
         },
     });
 
