@@ -155,7 +155,7 @@ export function MemberSessionsView({ sessions, memberName }: MemberSessionsViewP
                 setIsDetailOpen(false);
                 router.refresh();
             } else {
-                toast.error(result.error || 'Erreur lors de l\'annulation');
+                toast.error('error' in result ? result.error : 'Erreur lors de l\'annulation');
             }
         } catch (error) {
             toast.error('Erreur lors de l\'annulation');

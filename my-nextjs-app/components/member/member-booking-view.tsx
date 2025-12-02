@@ -287,11 +287,6 @@ export function MemberBookingView({ coaches, memberId }: MemberBookingViewProps)
                             ))}
                         </SelectContent>
                     </Select>
-                    {selectedCoach && (
-                        <Badge variant="secondary" className="text-xs">
-                            Séances de {selectedCoach.defaultDuration} min
-                        </Badge>
-                    )}
                 </div>
 
                 {/* Legend */}
