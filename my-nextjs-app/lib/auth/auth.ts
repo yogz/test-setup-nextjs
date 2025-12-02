@@ -105,19 +105,20 @@ export const auth = betterAuth({
   // IMPORTANT: nextCookies must be the LAST plugin
   plugins: [
     magicLink({
-      sendMagicLink: async ({ email, token, url }) => {
+      sendMagicLink: async ({ email, url }) => {
         // TODO: Implement email sending service (e.g., Resend, SendGrid, etc.)
-        console.log('Magic link for', email);
-        console.log('Magic link URL:', url);
-        console.log('Token:', token);
-
-        // For development, log the magic link to console
-        // In production, replace this with actual email sending
-        console.log('\n🔗 Magic Link Sign-In');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`📧 To: ${email}`);
-        console.log(`🔗 URL: ${url}`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        // In production, send via email service
+        if (process.env.NODE_ENV === 'production') {
+          // await sendEmail({ to: email, subject: 'Your magic link', body: url });
+          console.log(`Magic link sent to ${email}`);
+        } else {
+          // Only log details in development (never log token itself)
+          console.log('\n🔗 Magic Link Sign-In (DEV)');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log(`📧 To: ${email}`);
+          console.log(`🔗 URL: ${url}`);
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        }
       },
     }),
     nextCookies(),

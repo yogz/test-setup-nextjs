@@ -57,6 +57,13 @@
       "when": 1764630138125,
       "tag": "0007_peaceful_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1764632983942,
+      "tag": "0008_fancy_cable",
+      "breakpoints": true
     }
   ]
 }

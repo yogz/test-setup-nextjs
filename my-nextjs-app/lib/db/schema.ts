@@ -211,10 +211,10 @@ export const bookings = pgTable('bookings', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   sessionId: text('session_id')
     .notNull()
-    .references(() => trainingSessions.id),
+    .references(() => trainingSessions.id, { onDelete: 'cascade' }),
   memberId: text('member_id')
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: 'cascade' }),
   status: bookingStatusEnum('status').default('CONFIRMED').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   cancelledAt: timestamp('cancelled_at'),

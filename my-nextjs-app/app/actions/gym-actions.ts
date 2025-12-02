@@ -87,48 +87,62 @@ export async function createBookingAction(data: CreateBookingInput) {
         const { sessionId, memberId } = validation.data;
         const targetMemberId = memberId || user.id;
 
-        // 1. Check if session exists
-        const session = await db.query.trainingSessions.findFirst({
-            where: eq(trainingSessions.id, sessionId),
-        });
-
-        if (!session) {
-            return { success: false, error: 'Session not found' };
+        // Security: Members can only book for themselves
+        if (memberId && memberId !== user.id) {
+            if (user.role !== 'coach' && user.role !== 'owner') {
+                throw new ForbiddenError();
+            }
         }
 
-        // 2. Check capacity
-        const existingBookings = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(bookings)
-            .where(and(eq(bookings.sessionId, sessionId), eq(bookings.status, 'CONFIRMED')));
+        // Use transaction to prevent race conditions (overbooking)
+        const result = await db.transaction(async (tx) => {
+            // 1. Check if session exists
+            const session = await tx.query.trainingSessions.findFirst({
+                where: eq(trainingSessions.id, sessionId),
+            });
 
-        const bookingCount = Number(existingBookings[0]?.count || 0);
+            if (!session) {
+                return { success: false, error: 'Session not found' };
+            }
 
-        if (session.capacity && bookingCount >= session.capacity) {
-            return { success: false, error: 'Session is full' };
-        }
+            // 2. Check capacity (within transaction to prevent race condition)
+            const existingBookings = await tx
+                .select({ count: sql<number>`count(*)` })
+                .from(bookings)
+                .where(and(eq(bookings.sessionId, sessionId), eq(bookings.status, 'CONFIRMED')));
 
-        // 3. Check if already booked
-        const alreadyBooked = await db.query.bookings.findFirst({
-            where: and(
-                eq(bookings.sessionId, sessionId),
-                eq(bookings.memberId, targetMemberId),
-                eq(bookings.status, 'CONFIRMED')
-            ),
+            const bookingCount = Number(existingBookings[0]?.count || 0);
+
+            if (session.capacity && bookingCount >= session.capacity) {
+                return { success: false, error: 'Session is full' };
+            }
+
+            // 3. Check if already booked
+            const alreadyBooked = await tx.query.bookings.findFirst({
+                where: and(
+                    eq(bookings.sessionId, sessionId),
+                    eq(bookings.memberId, targetMemberId),
+                    eq(bookings.status, 'CONFIRMED')
+                ),
+            });
+
+            if (alreadyBooked) {
+                return { success: false, error: 'Already booked' };
+            }
+
+            await tx.insert(bookings).values({
+                sessionId,
+                memberId: targetMemberId,
+                status: 'CONFIRMED',
+            });
+
+            return { success: true, message: 'Booking confirmed' };
         });
 
-        if (alreadyBooked) {
-            return { success: false, error: 'Already booked' };
+        if (result.success) {
+            revalidatePath('/bookings');
         }
-
-        await db.insert(bookings).values({
-            sessionId,
-            memberId: targetMemberId,
-            status: 'CONFIRMED',
-        });
-
-        revalidatePath('/bookings');
-        return { success: true, message: 'Booking confirmed' };
+        return result;
     } catch (error) {
         return handleActionError(error);
     }
@@ -370,8 +384,6 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
         });
 
         revalidatePath('/bookings');
-        revalidatePath('/bookings');
-        console.log('Booking successful for member:', targetMemberId);
         return { success: true, message: 'Session booked successfully' };
     } catch (error) {
         console.error('Booking error:', error);
@@ -417,20 +429,41 @@ export async function addSessionCommentAction(data: AddSessionCommentInput) {
 
         const { sessionId, content } = validation.data;
 
-        // Using memberNotes as a proxy for session comments for now
+        // Get session to find the member for this note
+        const session = await db.query.trainingSessions.findFirst({
+            where: eq(trainingSessions.id, sessionId),
+            with: {
+                bookings: {
+                    where: eq(bookings.status, 'CONFIRMED'),
+                    limit: 1,
+                },
+            },
+        });
+
+        if (!session) {
+            return { success: false, error: 'Session not found' };
+        }
+
+        // Determine memberId and coachId based on context
+        let memberId: string;
+        let coachId: string;
+
+        if (user.role === 'coach' || user.role === 'owner') {
+            // Coach is commenting - memberId comes from booking
+            coachId = user.id;
+            memberId = session.bookings?.[0]?.memberId || session.memberId || user.id;
+        } else {
+            // Member is commenting on their own session
+            memberId = user.id;
+            coachId = session.coachId;
+        }
+
         await db.insert(memberNotes).values({
             sessionId,
-            memberId: user.id, // This is technically wrong if the coach is commenting on a member, but for "Session Comment" it might be generic.
-            // If Coach comments on a SESSION, who is the member?
-            // If this is a "Chat", maybe we need a real sessionComments table.
-            // For now, I'll assume the user is the author.
-            coachId: user.id, // Hack: memberNotes requires coachId and memberId.
-            // This table structure (memberNotes) is for "Coach notes about a Member".
-            // It is NOT for "Comments on a Session".
-            // I should probably create a real session_comments table if I want this feature.
-            // But for now, I will disable this or just log it.
+            memberId,
+            coachId,
             note: content,
-        } as any); // Type cast to bypass strict check for now as I know schema is mismatched
+        });
 
         revalidatePath(`/sessions/${sessionId}`);
         return { success: true, message: 'Comment added' };

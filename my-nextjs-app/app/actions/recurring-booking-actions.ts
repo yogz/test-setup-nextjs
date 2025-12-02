@@ -10,7 +10,8 @@ import {
   blockedSlots,
   users,
 } from '@/lib/db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, inArray } from 'drizzle-orm';
+import { bookings } from '@/lib/db/schema';
 import { revalidatePath } from 'next/cache';
 
 // ============================================================================
@@ -96,11 +97,22 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
     }
 
     // 2. Verify the time slot is within coach's weekly availability
+    // Helper to convert time string to minutes for proper comparison
+    const timeToMinutes = (time: string): number => {
+      const [hours, mins] = time.split(':').map(Number);
+      return hours * 60 + mins;
+    };
+
     const isInAvailability = coach.weeklyAvailability.some(avail => {
       if (avail.dayOfWeek !== dayOfWeek || !avail.isIndividual) {
         return false;
       }
-      return startTime >= avail.startTime && endTime <= avail.endTime;
+      // Compare numerically to avoid string comparison issues (e.g., "9:00" > "10:00")
+      const requestStart = timeToMinutes(startTime);
+      const requestEnd = timeToMinutes(endTime);
+      const availStart = timeToMinutes(avail.startTime);
+      const availEnd = timeToMinutes(avail.endTime);
+      return requestStart >= availStart && requestEnd <= availEnd;
     });
 
     if (!isInAvailability) {
@@ -194,7 +206,7 @@ export async function cancelRecurringBookingAction(data: CancelRecurringBookingI
       })
       .where(eq(recurringBookings.id, recurringBookingId));
 
-    // 4. Cancel future sessions
+    // 4. Cancel future sessions and their bookings
     const now = new Date();
     const sessionsToCancel = futureOnly
       ? and(
@@ -207,9 +219,30 @@ export async function cancelRecurringBookingAction(data: CancelRecurringBookingI
         eq(trainingSessions.status, 'scheduled')
       );
 
+    // Get session IDs before updating to also cancel their bookings
+    const sessionsBeingCancelled = await db.query.trainingSessions.findMany({
+      where: sessionsToCancel,
+      columns: { id: true },
+    });
+    const sessionIds = sessionsBeingCancelled.map(s => s.id);
+
+    // Cancel sessions
     await db.update(trainingSessions)
       .set({ status: 'cancelled' })
       .where(sessionsToCancel);
+
+    // Also cancel bookings for these sessions (data integrity)
+    if (sessionIds.length > 0) {
+      await db.update(bookings)
+        .set({
+          status: 'CANCELLED_BY_MEMBER',
+          cancelledAt: new Date()
+        })
+        .where(and(
+          inArray(bookings.sessionId, sessionIds),
+          eq(bookings.status, 'CONFIRMED')
+        ));
+    }
 
     revalidatePath('/bookings');
     revalidatePath('/member/recurring-bookings');
@@ -295,16 +328,39 @@ export async function generateSessionsForRecurringBooking(
       return { success: false, error: 'Coach has no default room configured' };
     }
 
-    // 4. Generate sessions for each occurrence
+    // 4. Pre-fetch all existing sessions for this recurring booking (fixes N+1 query)
+    const existingSessions = await db.query.trainingSessions.findMany({
+      where: eq(trainingSessions.recurringBookingId, recurringBookingId),
+    });
+    const existingSessionTimes = new Set(
+      existingSessions.map(s => s.startTime.getTime())
+    );
+
+    // Pre-process blocked slots for efficient lookup
+    const blockedSlotsList = (booking.coach as any).blockedSlots || [];
+
+    // 5. Generate sessions for each occurrence
     const sessionsToCreate = [];
     const currentDate = new Date(start);
     currentDate.setHours(0, 0, 0, 0);
 
     while (currentDate <= end) {
       if (currentDate.getDay() === dayOfWeek) {
-        // Parse time
-        const [startHour, startMin] = startTime.split(':').map(Number);
-        const [endHour, endMin] = endTime.split(':').map(Number);
+        // Parse time (validate format first)
+        const startParts = startTime.split(':');
+        const endParts = endTime.split(':');
+        if (startParts.length !== 2 || endParts.length !== 2) {
+          currentDate.setDate(currentDate.getDate() + 1);
+          continue;
+        }
+        const [startHour, startMin] = startParts.map(Number);
+        const [endHour, endMin] = endParts.map(Number);
+
+        // Validate parsed values
+        if (isNaN(startHour) || isNaN(startMin) || isNaN(endHour) || isNaN(endMin)) {
+          currentDate.setDate(currentDate.getDate() + 1);
+          continue;
+        }
 
         const sessionStart = new Date(currentDate);
         sessionStart.setHours(startHour, startMin, 0, 0);
@@ -312,29 +368,14 @@ export async function generateSessionsForRecurringBooking(
         const sessionEnd = new Date(currentDate);
         sessionEnd.setHours(endHour, endMin, 0, 0);
 
-        // Skip if in the past (before today's start)
-        // We allow sessions earlier today to be created (backdating for the day)
-        // We also allow sessions in the past if the user explicitly requested it (startDate < today)
-        // So we only skip if the session is BEFORE the requested start date (which shouldn't happen due to loop)
-        // or if we want to enforce some other rule.
-        // But here we want to allow backdating.
-        // So we remove the check against todayStart.
-
-        // Check if session already exists
-        const existingSession = await db.query.trainingSessions.findFirst({
-          where: and(
-            eq(trainingSessions.recurringBookingId, recurringBookingId),
-            eq(trainingSessions.startTime, sessionStart)
-          ),
-        });
-
-        if (existingSession) {
+        // Check if session already exists (using Set for O(1) lookup)
+        if (existingSessionTimes.has(sessionStart.getTime())) {
           currentDate.setDate(currentDate.getDate() + 1);
           continue;
         }
 
         // Check if slot is blocked
-        const isBlocked = (booking.coach as any).blockedSlots.some((block: any) =>
+        const isBlocked = blockedSlotsList.some((block: any) =>
           block.startTime <= sessionStart && block.endTime > sessionStart
         );
 

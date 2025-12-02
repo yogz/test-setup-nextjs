@@ -12,15 +12,12 @@ import { generateAllSessions } from '@/lib/utils/session-generator';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Security: Check authorization
+    // Security: Check authorization - ONLY accept valid Bearer token
+    // Note: User-Agent check removed as it can be spoofed
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    // Allow requests from Vercel Cron or with valid secret
-    const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron');
-    const hasValidSecret = cronSecret && authHeader === `Bearer ${cronSecret}`;
-
-    if (!isVercelCron && !hasValidSecret) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -45,7 +42,10 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        // Only expose error details in development
+        ...(process.env.NODE_ENV === 'development' && {
+          debug: error instanceof Error ? error.message : 'Unknown error',
+        }),
       },
       { status: 500 }
     );
@@ -83,7 +83,10 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        // Only expose error details in development
+        ...(process.env.NODE_ENV === 'development' && {
+          debug: error instanceof Error ? error.message : 'Unknown error',
+        }),
       },
       { status: 500 }
     );

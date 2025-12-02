@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect, Fragment } from 'react';
 import { format, addDays, isSameDay, setHours, setMinutes, isBefore, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -374,10 +374,9 @@ export function DailySlotList({
                                 })();
 
                                 return (
-                                    <>
+                                    <Fragment key={`slot-${day.toISOString()}-${index}`}>
                                         {hasGapBefore && (
                                             <div
-                                                key={`gap-${day.toISOString()}-${index}`}
                                                 className="flex flex-col items-center justify-center gap-2 p-3 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-dashed border-slate-300"
                                             >
                                                 <div className="flex flex-col items-center gap-1">
@@ -388,7 +387,6 @@ export function DailySlotList({
                                             </div>
                                         )}
                                         <Card
-                                            key={`${day.toISOString()}-${index}`}
                                             onClick={() => handleSlotClick(slot)}
                                         className={cn(
                                             "group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-0 p-0",
@@ -456,7 +454,7 @@ export function DailySlotList({
                                         {/* Subtle shine effect on hover */}
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                                     </Card>
-                                    </>
+                                    </Fragment>
                                 );
                             })}
                         </div>
