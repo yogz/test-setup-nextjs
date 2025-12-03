@@ -54,19 +54,19 @@ export default function SignInPage() {
     };
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="z-10 w-full max-w-md">
-                <Card className="p-6 sm:p-8">
-                    <CardHeader className="p-0 mb-6">
-                        <CardTitle className="text-2xl sm:text-3xl md:text-4xl text-center">
+        <main className="flex min-h-screen flex-col items-center justify-center p-0 sm:p-4 bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="z-10 w-full h-full sm:h-auto sm:max-w-md">
+                <Card className="min-h-screen sm:min-h-0 rounded-none sm:rounded-lg p-8 sm:p-8 flex flex-col justify-center">
+                    <CardHeader className="p-0 mb-8 sm:mb-6">
+                        <CardTitle className="text-4xl sm:text-3xl md:text-4xl text-center font-bold">
                             Bon retour !
                         </CardTitle>
-                        <CardDescription className="text-center text-sm sm:text-base">
+                        <CardDescription className="text-center text-base sm:text-base mt-3">
                             Connectez-vous à votre compte
                         </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="p-0 space-y-3">
+                    <CardContent className="p-0 space-y-4 sm:space-y-3">
                         {/* Google Sign In - Primary Option */}
                         <GoogleButton onClick={handleGoogleSignIn} disabled={isGoogleLoading || isLoading}>
                             {isGoogleLoading ? (
@@ -79,32 +79,33 @@ export default function SignInPage() {
                             )}
                         </GoogleButton>
 
-                        <div className="relative my-4 sm:my-6">
+                        <div className="relative my-6 sm:my-4">
                             <div className="absolute inset-0 flex items-center">
                                 <Separator />
                             </div>
-                            <div className="relative flex justify-center text-xs sm:text-sm">
-                                <span className="px-3 sm:px-4 bg-white text-gray-500 font-medium">Ou</span>
+                            <div className="relative flex justify-center text-sm sm:text-sm">
+                                <span className="px-4 bg-white text-gray-500 font-medium">Ou</span>
                             </div>
                         </div>
 
-                        <form onSubmit={handleSignIn} className="space-y-3 sm:space-y-4">
+                        <form onSubmit={handleSignIn} className="space-y-5 sm:space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="signin-email">E-mail</Label>
+                                <Label htmlFor="signin-email" className="text-base sm:text-sm">E-mail</Label>
                                 <Input
                                     id="signin-email"
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
+                                    className="h-12 text-base"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="signin-password">Mot de passe</Label>
+                                    <Label htmlFor="signin-password" className="text-base sm:text-sm">Mot de passe</Label>
                                     <Link
                                         href="/forgot-password"
-                                        className="text-xs text-blue-600 hover:underline"
+                                        className="text-sm text-blue-600 hover:underline"
                                     >
                                         Mot de passe oublié ?
                                     </Link>
@@ -115,9 +116,10 @@ export default function SignInPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
+                                    className="h-12 text-base"
                                 />
                             </div>
-                            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isGoogleLoading}>
+                            <Button type="submit" className="w-full h-12 text-base" disabled={isLoading || isGoogleLoading}>
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -129,7 +131,7 @@ export default function SignInPage() {
                             </Button>
                         </form>
 
-                        <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
+                        <p className="mt-6 sm:mt-6 text-center text-sm sm:text-sm text-gray-600">
                             Pas encore de compte ?{' '}
                             <Link href="/signup" className="text-blue-600 hover:underline font-semibold active:text-blue-700">
                                 S'inscrire
