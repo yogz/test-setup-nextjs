@@ -18,9 +18,12 @@ export default function Home() {
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     await authClient.signIn.email(
       {
@@ -34,16 +37,23 @@ export default function Home() {
         },
         onError: (ctx) => {
           toast.error(ctx.error.message);
+          setIsLoading(false);
         },
       }
     );
   };
 
   const handleGoogleSignIn = async () => {
-    await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: '/dashboard',
-    });
+    setIsGoogleLoading(true);
+    try {
+      await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: '/dashboard',
+      });
+    } catch (error) {
+      setIsGoogleLoading(false);
+      toast.error('Erreur lors de la connexion avec Google');
+    }
   };
 
   const handleMagicLinkSignIn = async (e: React.FormEvent) => {
@@ -197,8 +207,18 @@ export default function Home() {
             ) : (
               <>
                 {/* Google Sign In - Secondary Option */}
-                <GoogleButton onClick={handleGoogleSignIn}>
-                  Se connecter avec Google
+                <GoogleButton onClick={handleGoogleSignIn} disabled={isGoogleLoading || isLoading}>
+                  {isGoogleLoading ? (
+                    <>
+                      <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Connexion en cours...
+                    </>
+                  ) : (
+                    'Se connecter avec Google'
+                  )}
                 </GoogleButton>
 
                 <div className="relative my-4 sm:my-6">
@@ -278,8 +298,18 @@ export default function Home() {
                           required
                         />
                       </div>
-                      <Button type="submit" className="w-full" size="lg">
-                        Se connecter avec mot de passe
+                      <Button type="submit" className="w-full" size="lg" disabled={isLoading || isGoogleLoading}>
+                        {isLoading ? (
+                          <>
+                            <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Connexion en cours...
+                          </>
+                        ) : (
+                          'Se connecter avec mot de passe'
+                        )}
                       </Button>
                     </form>
                     <Button

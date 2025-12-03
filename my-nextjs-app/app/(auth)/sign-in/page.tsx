@@ -16,6 +16,7 @@ export default function SignInPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,10 +41,16 @@ export default function SignInPage() {
     };
 
     const handleGoogleSignIn = async () => {
-        await authClient.signIn.social({
-            provider: 'google',
-            callbackURL: '/dashboard',
-        });
+        setIsGoogleLoading(true);
+        try {
+            await authClient.signIn.social({
+                provider: 'google',
+                callbackURL: '/dashboard',
+            });
+        } catch (error) {
+            setIsGoogleLoading(false);
+            toast.error('Erreur lors de la connexion avec Google');
+        }
     };
 
     return (
@@ -61,8 +68,15 @@ export default function SignInPage() {
 
                     <CardContent className="p-0 space-y-3">
                         {/* Google Sign In - Primary Option */}
-                        <GoogleButton onClick={handleGoogleSignIn}>
-                            Se connecter avec Google
+                        <GoogleButton onClick={handleGoogleSignIn} disabled={isGoogleLoading || isLoading}>
+                            {isGoogleLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Connexion en cours...
+                                </>
+                            ) : (
+                                'Se connecter avec Google'
+                            )}
                         </GoogleButton>
 
                         <div className="relative my-4 sm:my-6">
@@ -103,11 +117,11 @@ export default function SignInPage() {
                                     required
                                 />
                             </div>
-                            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isGoogleLoading}>
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Connexion...
+                                        Connexion en cours...
                                     </>
                                 ) : (
                                     'Se connecter'
