@@ -39,7 +39,10 @@ export default async function MemberSessionsPage() {
     const memberSessions = memberBookings
         .filter(b => {
             const sessionDate = new Date(b.session.startTime);
-            return sessionDate >= oneMonthAgo && sessionDate <= threeMonthsAhead;
+            // Filter out cancelled bookings and cancelled sessions
+            const isBookingCancelled = b.status === 'CANCELLED_BY_MEMBER' || b.status === 'CANCELLED_BY_COACH';
+            const isSessionCancelled = b.session.status === 'cancelled';
+            return sessionDate >= oneMonthAgo && sessionDate <= threeMonthsAhead && !isBookingCancelled && !isSessionCancelled;
         })
         .map(b => ({
             id: b.id,
