@@ -381,10 +381,10 @@ export function DailySlotList({
                             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                             <h3 className={cn(
                                 "text-base md:text-lg font-semibold capitalize tracking-wide",
-                                isSameDay(day, new Date()) ? "text-emerald-700" : "text-slate-700"
+                                isSameDay(day, new Date()) ? "text-[#4a7c59]" : "text-[#000000]"
                             )}>
                                 {isSameDay(day, new Date()) && (
-                                    <span className="text-emerald-600 mr-2">●</span>
+                                    <span className="text-[#4a7c59] mr-2">●</span>
                                 )}
                                 {format(day, 'EEEE d MMMM', { locale: fr })}
                             </h3>
@@ -425,9 +425,9 @@ export function DailySlotList({
                                             onClick={() => handleSlotClick(slot)}
                                         className={cn(
                                             "group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-0 p-0",
-                                            slot.status === 'FREE' && "bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 shadow-sm",
-                                            slot.status === 'EXCEPTIONAL' && "bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 shadow-sm ring-2 ring-amber-200",
-                                            slot.status === 'BLOCKED' && "bg-gradient-to-br from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300",
+                                            slot.status === 'FREE' && "bg-gradient-to-br from-[#f0f5f1] to-[#e8f0ea] hover:from-[#e8f0ea] hover:to-[#dce8df] shadow-sm",
+                                            slot.status === 'EXCEPTIONAL' && "bg-gradient-to-br from-[#fef9f0] to-[#fef5e7] hover:from-[#fef5e7] hover:to-[#fdebd0] shadow-sm ring-2 ring-[#c49829]/30",
+                                            slot.status === 'BLOCKED' && "bg-gradient-to-br from-[#f1f2f4] to-[#e8eaed] hover:from-[#e8eaed] hover:to-[#dfe1e5]",
                                             slot.status === 'BOOKED' && "bg-gradient-to-br from-[#fef9f0] to-[#fef5e7] hover:from-[#fef5e7] hover:to-[#fdebd0] shadow-sm"
                                         )}
                                     >
@@ -435,9 +435,9 @@ export function DailySlotList({
                                         <div className={cn(
                                             "w-full px-3 py-2 flex items-center justify-between",
                                             slot.status === 'BOOKED' && "bg-[#c49829]",
-                                            slot.status === 'FREE' && "bg-emerald-700",
-                                            slot.status === 'EXCEPTIONAL' && "bg-amber-600",
-                                            slot.status === 'BLOCKED' && "bg-slate-500"
+                                            slot.status === 'FREE' && "bg-[#4a7c59]",
+                                            slot.status === 'EXCEPTIONAL' && "bg-[#c49829]",
+                                            slot.status === 'BLOCKED' && "bg-[#687586]"
                                         )}>
                                             <div className="flex items-center gap-2">
                                                 {slot.status === 'BOOKED' && slot.session && (
@@ -459,20 +459,20 @@ export function DailySlotList({
                                         <div className="flex flex-col p-3 min-h-[5rem] relative z-10">
                                             {slot.status === 'FREE' && (
                                                 <div className="flex-1 flex items-center justify-center">
-                                                    <span className="text-sm md:text-base font-semibold text-emerald-700 italic">Libre</span>
+                                                    <span className="text-sm md:text-base font-semibold text-[#4a7c59] italic">Libre</span>
                                                 </div>
                                             )}
 
                                             {slot.status === 'EXCEPTIONAL' && (
                                                 <div className="flex-1 flex items-center justify-center">
-                                                    <span className="text-sm md:text-base font-semibold text-amber-700 italic">Dispo exceptionnelle</span>
+                                                    <span className="text-sm md:text-base font-semibold text-[#c49829] italic">Dispo exceptionnelle</span>
                                                 </div>
                                             )}
 
                                             {slot.status === 'BLOCKED' && (
                                                 <div className="flex-1 flex items-center justify-center gap-1.5">
-                                                    <Lock className="h-4 w-4 text-slate-600" />
-                                                    <span className="text-sm font-semibold text-slate-700">Bloqué</span>
+                                                    <Lock className="h-4 w-4 text-[#687586]" />
+                                                    <span className="text-sm font-semibold text-[#687586]">Bloqué</span>
                                                 </div>
                                             )}
 

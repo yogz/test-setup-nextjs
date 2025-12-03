@@ -185,7 +185,7 @@ export function MemberSessionsView({ sessions, memberName }: MemberSessionsViewP
                 {/* Stats */}
                 <div className="flex items-center gap-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-slate-200">
                     <div className="flex items-center gap-2">
-                        <div className="h-10 w-10 rounded-full bg-emerald-600 flex items-center justify-center">
+                        <div className="h-10 w-10 rounded-full bg-[#c49829] flex items-center justify-center">
                             <Calendar className="h-5 w-5 text-white" />
                         </div>
                         <div>
@@ -198,16 +198,16 @@ export function MemberSessionsView({ sessions, memberName }: MemberSessionsViewP
                 {/* Legend */}
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200" />
-                        <span className="text-slate-600">À venir</span>
+                        <div className="w-4 h-4 rounded bg-gradient-to-br from-[#fef9f0] to-[#fef5e7] border border-[#c49829]/30" />
+                        <span className="text-[#687586]">À venir</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300" />
-                        <span className="text-slate-600">Passée</span>
+                        <div className="w-4 h-4 rounded bg-gradient-to-br from-[#f1f2f4] to-[#e8eaed] border border-[#687586]/30" />
+                        <span className="text-[#687586]">Passée</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-gradient-to-br from-red-50 to-red-100 border border-red-200" />
-                        <span className="text-slate-600">Annulée</span>
+                        <div className="w-4 h-4 rounded bg-gradient-to-br from-[#fce8e6] to-[#fad4d0] border border-[#c44829]/30" />
+                        <span className="text-[#687586]">Annulée</span>
                     </div>
                 </div>
 
@@ -224,10 +224,10 @@ export function MemberSessionsView({ sessions, memberName }: MemberSessionsViewP
                                     <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                                     <h3 className={cn(
                                         "text-base md:text-lg font-semibold capitalize tracking-wide",
-                                        isSameDay(day, new Date()) ? "text-emerald-700" : "text-slate-700"
+                                        isSameDay(day, new Date()) ? "text-[#c49829]" : "text-[#000000]"
                                     )}>
                                         {isSameDay(day, new Date()) && (
-                                            <span className="text-emerald-600 mr-2">●</span>
+                                            <span className="text-[#c49829] mr-2">●</span>
                                         )}
                                         {format(day, 'EEEE d MMMM', { locale: fr })}
                                     </h3>
@@ -246,17 +246,17 @@ export function MemberSessionsView({ sessions, memberName }: MemberSessionsViewP
                                                 onClick={() => handleSessionClick(session)}
                                                 className={cn(
                                                     "group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-0 p-0",
-                                                    session.displayStatus === 'UPCOMING' && "bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100",
-                                                    session.displayStatus === 'PAST' && "bg-gradient-to-br from-slate-100 to-slate-200 opacity-70",
-                                                    session.displayStatus === 'CANCELLED' && "bg-gradient-to-br from-red-50 to-red-100 opacity-70"
+                                                    session.displayStatus === 'UPCOMING' && "bg-gradient-to-br from-[#fef9f0] to-[#fef5e7] hover:from-[#fef5e7] hover:to-[#fdebd0]",
+                                                    session.displayStatus === 'PAST' && "bg-gradient-to-br from-[#f1f2f4] to-[#e8eaed] opacity-70",
+                                                    session.displayStatus === 'CANCELLED' && "bg-gradient-to-br from-[#fce8e6] to-[#fad4d0] opacity-70"
                                                 )}
                                             >
                                                 {/* Time Header Bar */}
                                                 <div className={cn(
                                                     "w-full px-3 py-2 flex items-center justify-between",
-                                                    session.displayStatus === 'UPCOMING' && "bg-emerald-700",
-                                                    session.displayStatus === 'PAST' && "bg-slate-500",
-                                                    session.displayStatus === 'CANCELLED' && "bg-red-400"
+                                                    session.displayStatus === 'UPCOMING' && "bg-[#c49829]",
+                                                    session.displayStatus === 'PAST' && "bg-[#687586]",
+                                                    session.displayStatus === 'CANCELLED' && "bg-[#c44829]"
                                                 )}>
                                                     <div className="flex items-center gap-2">
                                                         <Clock className="h-3.5 w-3.5 text-white" />
@@ -273,7 +273,7 @@ export function MemberSessionsView({ sessions, memberName }: MemberSessionsViewP
                                                 <div className="flex flex-col p-3 min-h-[5rem]">
                                                     {/* Coach */}
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <div className="h-8 w-8 rounded-full bg-slate-900 flex items-center justify-center">
+                                                        <div className="h-8 w-8 rounded-full bg-[#000000] flex items-center justify-center">
                                                             <User className="h-4 w-4 text-white" />
                                                         </div>
                                                         <div>
