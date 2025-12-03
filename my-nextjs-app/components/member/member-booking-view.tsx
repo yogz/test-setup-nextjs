@@ -271,11 +271,11 @@ export function MemberBookingView({ coaches, memberId, recurringBookings }: Memb
                 </div>
 
                 <div className="w-full">
-                    <div className="grid w-full grid-cols-2 max-w-[400px] bg-slate-100 p-1 rounded-lg mb-6">
+                    <div className="grid w-full grid-cols-2 max-w-[500px] bg-slate-100 p-1.5 rounded-xl mb-6">
                         <button
                             onClick={() => setActiveTab('single')}
                             className={cn(
-                                "py-2 px-3 text-sm font-medium rounded-md transition-all",
+                                "py-3 px-4 text-base font-semibold rounded-lg transition-all",
                                 activeTab === 'single'
                                     ? "bg-white text-slate-900 shadow-sm"
                                     : "text-slate-500 hover:text-slate-900"
@@ -286,7 +286,7 @@ export function MemberBookingView({ coaches, memberId, recurringBookings }: Memb
                         <button
                             onClick={() => setActiveTab('recurring')}
                             className={cn(
-                                "py-2 px-3 text-sm font-medium rounded-md transition-all",
+                                "py-3 px-4 text-base font-semibold rounded-lg transition-all",
                                 activeTab === 'recurring'
                                     ? "bg-white text-slate-900 shadow-sm"
                                     : "text-slate-500 hover:text-slate-900"
@@ -299,20 +299,20 @@ export function MemberBookingView({ coaches, memberId, recurringBookings }: Memb
                     {activeTab === 'single' && (
                         <div className="space-y-6">
                             {/* Coach Selection */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-slate-200">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-10 w-10 rounded-full bg-slate-900 flex items-center justify-center">
-                                        <User className="h-5 w-5 text-white" />
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 bg-white/50 backdrop-blur-sm rounded-xl border border-slate-200">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-12 w-12 rounded-full bg-slate-900 flex items-center justify-center">
+                                        <User className="h-6 w-6 text-white" />
                                     </div>
-                                    <span className="font-medium text-slate-700">Coach :</span>
+                                    <span className="font-semibold text-lg text-slate-700">Coach :</span>
                                 </div>
                                 <Select value={selectedCoachId} onValueChange={setSelectedCoachId}>
-                                    <SelectTrigger className="w-full sm:w-64 bg-white">
+                                    <SelectTrigger className="w-full sm:w-72 bg-white h-12 text-base">
                                         <SelectValue placeholder="Choisir un coach" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {coaches.map(coach => (
-                                            <SelectItem key={coach.id} value={coach.id}>
+                                            <SelectItem key={coach.id} value={coach.id} className="text-base py-3">
                                                 {coach.name}
                                             </SelectItem>
                                         ))}
@@ -321,14 +321,14 @@ export function MemberBookingView({ coaches, memberId, recurringBookings }: Memb
                             </div>
 
                             {/* Legend */}
-                            <div className="flex flex-wrap items-center gap-4 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200" />
-                                    <span className="text-slate-600">Disponible</span>
+                            <div className="flex flex-wrap items-center gap-6 text-base">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200" />
+                                    <span className="text-slate-700 font-medium">Disponible</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300" />
-                                    <span className="text-slate-600">Indisponible</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-slate-300" />
+                                    <span className="text-slate-700 font-medium">Indisponible</span>
                                 </div>
                             </div>
 
@@ -359,7 +359,7 @@ export function MemberBookingView({ coaches, memberId, recurringBookings }: Memb
                                                 </div>
 
                                                 {/* Slots Grid */}
-                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-3">
                                                     {slots.map((slot, index) => {
                                                         // Check for time gap
                                                         const hasGapBefore = index > 0 && (() => {
@@ -374,14 +374,14 @@ export function MemberBookingView({ coaches, memberId, recurringBookings }: Memb
                                                         return (
                                                             <Fragment key={`slot-${day.toISOString()}-${index}`}>
                                                                 {hasGapBefore && (
-                                                                    <div className="flex items-center justify-center p-2 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                                                                        <span className="text-[10px] text-slate-400 italic">Pause</span>
+                                                                    <div className="flex items-center justify-center p-3 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                                                                        <span className="text-xs text-slate-400 italic font-medium">Pause</span>
                                                                     </div>
                                                                 )}
                                                                 <Card
                                                                     onClick={() => handleSlotClick(slot)}
                                                                     className={cn(
-                                                                        "group relative overflow-hidden transition-all duration-300 border-0 p-0",
+                                                                        "group relative overflow-hidden transition-all duration-300 border-0 p-0 min-h-[90px]",
                                                                         slot.isAvailable
                                                                             ? "cursor-pointer hover:shadow-lg hover:-translate-y-0.5 bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100"
                                                                             : "cursor-not-allowed bg-gradient-to-br from-slate-100 to-slate-200 opacity-50"
@@ -389,18 +389,18 @@ export function MemberBookingView({ coaches, memberId, recurringBookings }: Memb
                                                                 >
                                                                     {/* Time Header Bar */}
                                                                     <div className={cn(
-                                                                        "w-full px-2 py-1.5 flex items-center justify-center",
+                                                                        "w-full px-3 py-2.5 flex items-center justify-center",
                                                                         slot.isAvailable ? "bg-emerald-700" : "bg-slate-400"
                                                                     )}>
-                                                                        <span className="text-xs md:text-sm font-bold text-white">{slot.time}</span>
+                                                                        <span className="text-base md:text-lg font-bold text-white">{slot.time}</span>
                                                                     </div>
 
                                                                     {/* Content Section */}
-                                                                    <div className="flex flex-col items-center justify-center p-2 min-h-[2.5rem]">
+                                                                    <div className="flex flex-col items-center justify-center p-3 min-h-[3rem]">
                                                                         {slot.isAvailable ? (
-                                                                            <span className="text-xs font-medium text-emerald-700">Libre</span>
+                                                                            <span className="text-sm font-semibold text-emerald-700">Libre</span>
                                                                         ) : (
-                                                                            <span className="text-xs font-medium text-slate-500 line-through">—</span>
+                                                                            <span className="text-sm font-semibold text-slate-500 line-through">—</span>
                                                                         )}
                                                                     </div>
 
