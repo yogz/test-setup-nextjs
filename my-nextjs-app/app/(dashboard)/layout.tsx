@@ -11,7 +11,7 @@ import {
     Dumbbell,
     ClipboardList,
     BookCheck,
-    Repeat,
+
     CalendarPlus
 } from 'lucide-react';
 import { SignOutButton } from '@/components/ui/sign-out-button';
@@ -64,10 +64,7 @@ export default async function DashboardLayout({
                         <span className="text-[10px] md:text-sm mt-1 md:mt-0">Réserver</span>
                     </Link>
 
-                    <Link href="/member/recurring-bookings" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
-                        <Repeat size={24} className="md:w-5 md:h-5" />
-                        <span className="text-[10px] md:text-sm mt-1 md:mt-0">Récurrent</span>
-                    </Link>
+
 
                     <Link href="/member/stats" className="flex flex-col md:flex-row items-center md:gap-2 text-slate-300 hover:text-white p-2 md:px-4 md:py-2 rounded-lg hover:bg-slate-800 transition-colors">
                         <BarChart3 size={24} className="md:w-5 md:h-5" />

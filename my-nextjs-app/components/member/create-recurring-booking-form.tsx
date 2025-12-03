@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { createRecurringBookingAction } from '@/app/actions/recurring-booking-actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,6 +82,7 @@ export function CreateRecurringBookingForm({ coaches }: CreateRecurringBookingFo
       });
 
       if (result.success) {
+        toast.success('Réservation récurrente créée !');
         setOpen(false);
         router.refresh();
         // Reset form

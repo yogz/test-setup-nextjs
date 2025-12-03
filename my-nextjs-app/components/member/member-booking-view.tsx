@@ -22,6 +22,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { CreateRecurringBookingForm } from '@/components/member/create-recurring-booking-form';
+import { RecurringBookingsList } from '@/components/member/recurring-bookings-list';
 
 interface CoachAvailability {
     dayOfWeek: number;
@@ -45,6 +47,7 @@ interface CoachData {
 interface MemberBookingViewProps {
     coaches: CoachData[];
     memberId: string;
+    recurringBookings?: any[]; // We can refine this type if needed, but for now any[] is fine to match the passed data structure or we can duplicate the type from the page
 }
 
 interface AvailableSlot {
@@ -55,8 +58,9 @@ interface AvailableSlot {
     isAvailable: boolean;
 }
 
-export function MemberBookingView({ coaches, memberId }: MemberBookingViewProps) {
+export function MemberBookingView({ coaches, memberId, recurringBookings }: MemberBookingViewProps) {
     const router = useRouter();
+    const [activeTab, setActiveTab] = useState<'single' | 'recurring'>('single');
     const [selectedCoachId, setSelectedCoachId] = useState<string>(coaches[0]?.id || '');
     const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -226,7 +230,6 @@ export function MemberBookingView({ coaches, memberId }: MemberBookingViewProps)
                 setIsConfirmOpen(false);
                 setSelectedSlot(null);
                 router.refresh();
-                router.push('/bookings');
             } else {
                 toast.error('error' in result ? result.error : 'Erreur lors de la réservation');
             }
@@ -263,159 +266,217 @@ export function MemberBookingView({ coaches, memberId }: MemberBookingViewProps)
                         Réserver une séance
                     </h1>
                     <p className="text-slate-600 text-sm md:text-base font-light">
-                        Choisissez un coach et sélectionnez un créneau disponible.
+                        Gérez vos séances ponctuelles et récurrentes.
                     </p>
                 </div>
 
-                {/* Coach Selection */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-slate-200">
-                    <div className="flex items-center gap-2">
-                        <div className="h-10 w-10 rounded-full bg-slate-900 flex items-center justify-center">
-                            <User className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="font-medium text-slate-700">Coach :</span>
+                <div className="w-full">
+                    <div className="grid w-full grid-cols-2 max-w-[400px] bg-slate-100 p-1 rounded-lg mb-6">
+                        <button
+                            onClick={() => setActiveTab('single')}
+                            className={cn(
+                                "py-2 px-3 text-sm font-medium rounded-md transition-all",
+                                activeTab === 'single'
+                                    ? "bg-white text-slate-900 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-900"
+                            )}
+                        >
+                            Séance ponctuelle
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('recurring')}
+                            className={cn(
+                                "py-2 px-3 text-sm font-medium rounded-md transition-all",
+                                activeTab === 'recurring'
+                                    ? "bg-white text-slate-900 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-900"
+                            )}
+                        >
+                            Séance récurrente
+                        </button>
                     </div>
-                    <Select value={selectedCoachId} onValueChange={setSelectedCoachId}>
-                        <SelectTrigger className="w-full sm:w-64 bg-white">
-                            <SelectValue placeholder="Choisir un coach" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {coaches.map(coach => (
-                                <SelectItem key={coach.id} value={coach.id}>
-                                    {coach.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
 
-                {/* Legend */}
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200" />
-                        <span className="text-slate-600">Disponible</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300" />
-                        <span className="text-slate-600">Indisponible</span>
-                    </div>
-                </div>
-
-                {/* Calendar Grid */}
-                {selectedCoach && (
-                    <div className="space-y-6">
-                        {days.map((day) => {
-                            const slots = getSlotsForDay(day, selectedCoach);
-                            if (slots.length === 0) return null;
-
-                            const hasAvailableSlots = slots.some(s => s.isAvailable);
-
-                            return (
-                                <div key={day.toISOString()} className="space-y-3">
-                                    {/* Day Header */}
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-                                        <h3 className={cn(
-                                            "text-base md:text-lg font-semibold capitalize tracking-wide",
-                                            isSameDay(day, new Date()) ? "text-emerald-700" : "text-slate-700"
-                                        )}>
-                                            {isSameDay(day, new Date()) && (
-                                                <span className="text-emerald-600 mr-2">●</span>
-                                            )}
-                                            {format(day, 'EEEE d MMMM', { locale: fr })}
-                                        </h3>
-                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                    {activeTab === 'single' && (
+                        <div className="space-y-6">
+                            {/* Coach Selection */}
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-slate-200">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-10 w-10 rounded-full bg-slate-900 flex items-center justify-center">
+                                        <User className="h-5 w-5 text-white" />
                                     </div>
+                                    <span className="font-medium text-slate-700">Coach :</span>
+                                </div>
+                                <Select value={selectedCoachId} onValueChange={setSelectedCoachId}>
+                                    <SelectTrigger className="w-full sm:w-64 bg-white">
+                                        <SelectValue placeholder="Choisir un coach" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {coaches.map(coach => (
+                                            <SelectItem key={coach.id} value={coach.id}>
+                                                {coach.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                                    {/* Slots Grid */}
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                                        {slots.map((slot, index) => {
-                                            // Check for time gap
-                                            const hasGapBefore = index > 0 && (() => {
-                                                const prevSlot = slots[index - 1];
-                                                const prevTime = new Date(prevSlot.date);
-                                                const currentTime = new Date(slot.date);
-                                                const prevDuration = prevSlot.duration || 60;
-                                                const expectedNextTime = new Date(prevTime.getTime() + prevDuration * 60 * 1000);
-                                                return currentTime.getTime() > expectedNextTime.getTime();
-                                            })();
+                            {/* Legend */}
+                            <div className="flex flex-wrap items-center gap-4 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200" />
+                                    <span className="text-slate-600">Disponible</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300" />
+                                    <span className="text-slate-600">Indisponible</span>
+                                </div>
+                            </div>
 
-                                            return (
-                                                <Fragment key={`slot-${day.toISOString()}-${index}`}>
-                                                    {hasGapBefore && (
-                                                        <div className="flex items-center justify-center p-2 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                                                            <span className="text-[10px] text-slate-400 italic">Pause</span>
-                                                        </div>
-                                                    )}
-                                                    <Card
-                                                        onClick={() => handleSlotClick(slot)}
-                                                        className={cn(
-                                                            "group relative overflow-hidden transition-all duration-300 border-0 p-0",
-                                                            slot.isAvailable
-                                                                ? "cursor-pointer hover:shadow-lg hover:-translate-y-0.5 bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100"
-                                                                : "cursor-not-allowed bg-gradient-to-br from-slate-100 to-slate-200 opacity-50"
+                            {/* Calendar Grid */}
+                            {selectedCoach && (
+                                <div className="space-y-6">
+                                    {days.map((day) => {
+                                        const slots = getSlotsForDay(day, selectedCoach);
+                                        if (slots.length === 0) return null;
+
+                                        const hasAvailableSlots = slots.some(s => s.isAvailable);
+
+                                        return (
+                                            <div key={day.toISOString()} className="space-y-3">
+                                                {/* Day Header */}
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                                                    <h3 className={cn(
+                                                        "text-base md:text-lg font-semibold capitalize tracking-wide",
+                                                        isSameDay(day, new Date()) ? "text-emerald-700" : "text-slate-700"
+                                                    )}>
+                                                        {isSameDay(day, new Date()) && (
+                                                            <span className="text-emerald-600 mr-2">●</span>
                                                         )}
-                                                    >
-                                                        {/* Time Header Bar */}
-                                                        <div className={cn(
-                                                            "w-full px-2 py-1.5 flex items-center justify-center",
-                                                            slot.isAvailable ? "bg-emerald-700" : "bg-slate-400"
-                                                        )}>
-                                                            <span className="text-xs md:text-sm font-bold text-white">{slot.time}</span>
-                                                        </div>
+                                                        {format(day, 'EEEE d MMMM', { locale: fr })}
+                                                    </h3>
+                                                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                                                </div>
 
-                                                        {/* Content Section */}
-                                                        <div className="flex flex-col items-center justify-center p-2 min-h-[2.5rem]">
-                                                            {slot.isAvailable ? (
-                                                                <span className="text-xs font-medium text-emerald-700">Libre</span>
-                                                            ) : (
-                                                                <span className="text-xs font-medium text-slate-500 line-through">—</span>
-                                                            )}
-                                                        </div>
+                                                {/* Slots Grid */}
+                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                                                    {slots.map((slot, index) => {
+                                                        // Check for time gap
+                                                        const hasGapBefore = index > 0 && (() => {
+                                                            const prevSlot = slots[index - 1];
+                                                            const prevTime = new Date(prevSlot.date);
+                                                            const currentTime = new Date(slot.date);
+                                                            const prevDuration = prevSlot.duration || 60;
+                                                            const expectedNextTime = new Date(prevTime.getTime() + prevDuration * 60 * 1000);
+                                                            return currentTime.getTime() > expectedNextTime.getTime();
+                                                        })();
 
-                                                        {/* Shine effect on hover */}
-                                                        {slot.isAvailable && (
-                                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                                                        )}
-                                                    </Card>
-                                                </Fragment>
-                                            );
-                                        })}
-                                    </div>
+                                                        return (
+                                                            <Fragment key={`slot-${day.toISOString()}-${index}`}>
+                                                                {hasGapBefore && (
+                                                                    <div className="flex items-center justify-center p-2 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                                                                        <span className="text-[10px] text-slate-400 italic">Pause</span>
+                                                                    </div>
+                                                                )}
+                                                                <Card
+                                                                    onClick={() => handleSlotClick(slot)}
+                                                                    className={cn(
+                                                                        "group relative overflow-hidden transition-all duration-300 border-0 p-0",
+                                                                        slot.isAvailable
+                                                                            ? "cursor-pointer hover:shadow-lg hover:-translate-y-0.5 bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100"
+                                                                            : "cursor-not-allowed bg-gradient-to-br from-slate-100 to-slate-200 opacity-50"
+                                                                    )}
+                                                                >
+                                                                    {/* Time Header Bar */}
+                                                                    <div className={cn(
+                                                                        "w-full px-2 py-1.5 flex items-center justify-center",
+                                                                        slot.isAvailable ? "bg-emerald-700" : "bg-slate-400"
+                                                                    )}>
+                                                                        <span className="text-xs md:text-sm font-bold text-white">{slot.time}</span>
+                                                                    </div>
 
-                                    {/* No available slots message */}
-                                    {!hasAvailableSlots && (
-                                        <p className="text-center text-sm text-slate-400 italic py-2">
-                                            Tous les créneaux sont réservés ou passés
-                                        </p>
+                                                                    {/* Content Section */}
+                                                                    <div className="flex flex-col items-center justify-center p-2 min-h-[2.5rem]">
+                                                                        {slot.isAvailable ? (
+                                                                            <span className="text-xs font-medium text-emerald-700">Libre</span>
+                                                                        ) : (
+                                                                            <span className="text-xs font-medium text-slate-500 line-through">—</span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Shine effect on hover */}
+                                                                    {slot.isAvailable && (
+                                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                                                                    )}
+                                                                </Card>
+                                                            </Fragment>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* No available slots message */}
+                                                {!hasAvailableSlots && (
+                                                    <p className="text-center text-sm text-slate-400 italic py-2">
+                                                        Tous les créneaux sont réservés ou passés
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Sentinel for infinite scroll */}
+                                    <div ref={sentinelRef} className="h-4" />
+
+                                    {/* Loading indicator */}
+                                    {isLoadingMore && (
+                                        <div className="flex justify-center items-center py-8">
+                                            <div className="flex items-center gap-2 text-slate-600">
+                                                <div className="h-5 w-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                                                <span className="text-sm">Chargement...</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* End message */}
+                                    {daysToShow >= maxDays && (
+                                        <div className="flex justify-center py-8">
+                                            <div className="text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
+                                                {maxDays} jours affichés (12 semaines)
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-                            );
-                        })}
+                            )}
+                        </div>
+                    )}
 
-                        {/* Sentinel for infinite scroll */}
-                        <div ref={sentinelRef} className="h-4" />
-
-                        {/* Loading indicator */}
-                        {isLoadingMore && (
-                            <div className="flex justify-center items-center py-8">
-                                <div className="flex items-center gap-2 text-slate-600">
-                                    <div className="h-5 w-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                                    <span className="text-sm">Chargement...</span>
+                    {activeTab === 'recurring' && (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 className="text-xl font-semibold text-slate-900">Mes réservations récurrentes</h2>
+                                    <p className="text-slate-600">Gérez vos créneaux réguliers avec vos coachs</p>
                                 </div>
+                                <CreateRecurringBookingForm coaches={coaches} />
                             </div>
-                        )}
 
-                        {/* End message */}
-                        {daysToShow >= maxDays && (
-                            <div className="flex justify-center py-8">
-                                <div className="text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
-                                    {maxDays} jours affichés (12 semaines)
-                                </div>
+                            <div className="rounded-lg border bg-white p-6">
+                                <RecurringBookingsList bookings={recurringBookings || []} />
                             </div>
-                        )}
-                    </div>
-                )}
+
+                            {/* Info Section */}
+                            <div className="mt-6 rounded-lg bg-blue-50 p-4">
+                                <h3 className="font-semibold text-blue-900">Comment ça fonctionne ?</h3>
+                                <ul className="mt-2 space-y-1 text-sm text-blue-800">
+                                    <li>• Créez une réservation récurrente pour automatiser vos sessions hebdomadaires</li>
+                                    <li>• Les sessions sont générées automatiquement pour les 6 prochaines semaines</li>
+                                    <li>• Vous pouvez annuler toutes les sessions futures en un clic</li>
+                                    <li>• Les sessions passées restent dans votre historique pour la facturation</li>
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Confirmation Dialog */}
                 <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>

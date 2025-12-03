@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { users, weeklyAvailability, blockedSlots, trainingSessions, coachSettings } from '@/lib/db/schema';
+import { users, weeklyAvailability, blockedSlots, trainingSessions, coachSettings, recurringBookings } from '@/lib/db/schema';
 import { eq, and, gte, lte, ne, or } from 'drizzle-orm';
 import { MemberBookingView } from '@/components/member/member-booking-view';
 
@@ -92,10 +92,35 @@ export default async function MemberBookPage() {
             })),
     }));
 
+    // Fetch member's recurring bookings
+    const myBookings = await db.query.recurringBookings.findMany({
+        where: eq(recurringBookings.memberId, session.user.id),
+        with: {
+            coach: {
+                columns: {
+                    id: true,
+                    name: true,
+                },
+            },
+            sessions: {
+                where: (sessions, { gte }) => gte(sessions.startTime, new Date()),
+                orderBy: (sessions, { asc }) => [asc(sessions.startTime)],
+                limit: 10,
+                columns: {
+                    id: true,
+                    startTime: true,
+                    status: true,
+                },
+            },
+        },
+        orderBy: (bookings, { desc }) => [desc(bookings.createdAt)],
+    });
+
     return (
         <MemberBookingView
             coaches={coachesWithAvailability}
             memberId={session.user.id}
+            recurringBookings={myBookings}
         />
     );
 }

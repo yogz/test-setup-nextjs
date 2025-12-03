@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Loader2 } from 'lucide-react';
 
 export default function SignInPage() {
     const [email, setEmail] = useState('');
@@ -103,7 +104,14 @@ export default function SignInPage() {
                                 />
                             </div>
                             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                                {isLoading ? 'Connexion...' : 'Se connecter'}
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Connexion...
+                                    </>
+                                ) : (
+                                    'Se connecter'
+                                )}
                             </Button>
                         </form>
 

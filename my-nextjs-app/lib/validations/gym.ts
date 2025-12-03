@@ -1,28 +1,28 @@
 import { z } from 'zod';
 
 export const createBookingSchema = z.object({
-    sessionId: z.string().uuid(),
-    memberId: z.string().uuid().optional(), // Optional if booking for self
+    sessionId: z.string().min(1),
+    memberId: z.string().min(1).optional(), // Optional if booking for self
 });
 
 export const createRecurringBookingSchema = z.object({
-    sessionId: z.string().uuid(), // The recurring session to book
+    sessionId: z.string().min(1), // The recurring session to book
     numberOfOccurrences: z.number().min(1).max(52).optional(), // How many future occurrences to book
-    memberId: z.string().uuid().optional(),
+    memberId: z.string().min(1).optional(),
 });
 
 export const cancelBookingSchema = z.object({
-    bookingId: z.string().uuid(),
+    bookingId: z.string().min(1),
     reason: z.string().optional(),
 });
 
 export const confirmSessionSchema = z.object({
-    sessionId: z.string().uuid(),
+    sessionId: z.string().min(1),
     notes: z.string().optional(),
 });
 
 export const addSessionCommentSchema = z.object({
-    sessionId: z.string().uuid(),
+    sessionId: z.string().min(1),
     content: z.string().min(1, 'Comment cannot be empty'),
 });
 
@@ -40,14 +40,14 @@ export const createTrainingSessionSchema = z.object({
     endTime: z.string().datetime(), // ISO string
     capacity: z.number().min(1).default(1),
     type: z.enum(['ONE_TO_ONE', 'GROUP']),
-    roomId: z.string().uuid().optional(), // Optional for now
+    roomId: z.string().min(1).optional(), // Optional for now
 });
 
 export const bookAvailableSlotSchema = z.object({
-    coachId: z.string().uuid(),
+    coachId: z.string().min(1),
     startTime: z.string().datetime(), // ISO string
     endTime: z.string().datetime(), // ISO string
-    memberId: z.string().uuid().optional(), // Optional if booking for self
+    memberId: z.string().min(1).optional(), // Optional if booking for self
 });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
