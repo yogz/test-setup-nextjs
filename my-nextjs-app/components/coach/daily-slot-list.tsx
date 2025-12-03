@@ -6,7 +6,7 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { MapPin, Users, User, Lock, Repeat } from 'lucide-react';
+import { MapPin, Users, User, Lock, Repeat, Clock } from 'lucide-react';
 import { BlockSlotModal } from './modals/block-slot-modal';
 import { BookMemberModal } from './modals/book-member-modal';
 import { CreateClassModal } from './modals/create-class-modal';
@@ -379,13 +379,19 @@ export function DailySlotList({
                     <div key={day.toISOString()} className="space-y-3">
                         <div className="flex items-center gap-2">
                             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-                            <h3 className="text-base md:text-lg font-semibold text-slate-700 capitalize tracking-wide">
+                            <h3 className={cn(
+                                "text-base md:text-lg font-semibold capitalize tracking-wide",
+                                isSameDay(day, new Date()) ? "text-emerald-700" : "text-slate-700"
+                            )}>
+                                {isSameDay(day, new Date()) && (
+                                    <span className="text-emerald-600 mr-2">●</span>
+                                )}
                                 {format(day, 'EEEE d MMMM', { locale: fr })}
                             </h3>
                             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {slots.map((slot, index) => {
                                 // Get room name from slot's roomId
                                 const roomName = slot.roomId
@@ -426,58 +432,89 @@ export function DailySlotList({
                                         )}
                                     >
                                         {/* Time Header Bar */}
-                                        <div className="w-full px-2 py-1.5 flex items-center justify-center gap-1 bg-slate-900">
-                                            {slot.status === 'BOOKED' && slot.session && (
-                                                slot.session.type === 'GROUP' ?
-                                                    <Users className="h-3 w-3 text-white" /> :
-                                                    <User className="h-3 w-3 text-white" />
-                                            )}
-                                            <span className="text-xs md:text-sm font-bold text-white">{slot.time}</span>
+                                        <div className={cn(
+                                            "w-full px-3 py-2 flex items-center justify-between",
+                                            slot.status === 'BOOKED' && "bg-violet-700",
+                                            slot.status === 'FREE' && "bg-emerald-700",
+                                            slot.status === 'EXCEPTIONAL' && "bg-amber-600",
+                                            slot.status === 'BLOCKED' && "bg-slate-500"
+                                        )}>
+                                            <div className="flex items-center gap-2">
+                                                {slot.status === 'BOOKED' && slot.session && (
+                                                    slot.session.type === 'GROUP' ?
+                                                        <Users className="h-3.5 w-3.5 text-white" /> :
+                                                        <User className="h-3.5 w-3.5 text-white" />
+                                                )}
+                                                {slot.status !== 'BOOKED' && <Clock className="h-3.5 w-3.5 text-white" />}
+                                                <span className="text-sm font-bold text-white">
+                                                    {slot.time} - {format(new Date(slot.date.getTime() + (slot.duration || 60) * 60000), 'HH:mm')}
+                                                </span>
+                                            </div>
                                             {slot.status === 'BOOKED' && slot.isRecurring && (
-                                                <Repeat className="h-3 w-3 text-white" />
+                                                <Repeat className="h-3.5 w-3.5 text-white" />
                                             )}
                                         </div>
 
                                         {/* Content Section */}
-                                        <div className="flex flex-col p-2 min-h-[4.5rem] relative z-10">
-                                            {/* Room Badge - More Visual */}
-                                            {roomName && (
-                                                <div className="flex items-center justify-center gap-1 mb-2">
-                                                    <div className="flex items-center gap-1 bg-white/60 backdrop-blur-sm px-2 py-0.5 rounded-full border border-slate-200/50">
-                                                        <MapPin className="h-3 w-3 text-slate-700" />
-                                                        <span className="text-[10px] md:text-xs font-medium text-slate-700 truncate max-w-full">
-                                                            {roomName}
-                                                        </span>
-                                                    </div>
+                                        <div className="flex flex-col p-3 min-h-[5rem] relative z-10">
+                                            {slot.status === 'FREE' && (
+                                                <div className="flex-1 flex items-center justify-center">
+                                                    <span className="text-sm md:text-base font-semibold text-emerald-700 italic">Libre</span>
                                                 </div>
                                             )}
 
-                                            {/* Status/Content */}
-                                            <div className="flex-1 flex flex-col items-center justify-center">
-                                                {slot.status === 'FREE' && (
-                                                    <span className="text-sm md:text-base font-medium text-emerald-700 italic">Libre</span>
-                                                )}
+                                            {slot.status === 'EXCEPTIONAL' && (
+                                                <div className="flex-1 flex items-center justify-center">
+                                                    <span className="text-sm md:text-base font-semibold text-amber-700 italic">Dispo exceptionnelle</span>
+                                                </div>
+                                            )}
 
-                                                {slot.status === 'BLOCKED' && (
-                                                    <div className="flex items-center gap-1">
-                                                        <Lock className="h-3 w-3 text-slate-600" />
-                                                        <span className="text-xs md:text-sm font-semibold text-slate-700">Bloqué</span>
+                                            {slot.status === 'BLOCKED' && (
+                                                <div className="flex-1 flex items-center justify-center gap-1.5">
+                                                    <Lock className="h-4 w-4 text-slate-600" />
+                                                    <span className="text-sm font-semibold text-slate-700">Bloqué</span>
+                                                </div>
+                                            )}
+
+                                            {slot.status === 'BOOKED' && slot.session && (
+                                                <>
+                                                    {/* Member info */}
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <div className="h-8 w-8 rounded-full bg-violet-700 flex items-center justify-center">
+                                                            {slot.session.type === 'GROUP' ? (
+                                                                <Users className="h-4 w-4 text-white" />
+                                                            ) : (
+                                                                <User className="h-4 w-4 text-white" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-semibold text-slate-800 truncate">
+                                                                {slot.session.member?.name || slot.session.bookings?.[0]?.member?.name || slot.session.title || "Réservé"}
+                                                            </p>
+                                                            <p className="text-xs text-slate-500">
+                                                                {slot.session.type === 'ONE_TO_ONE' ? 'Individuel' : 'Collectif'}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                )}
 
-                                                {slot.status === 'BOOKED' && slot.session && (
-                                                    <div className="flex flex-col items-center gap-1 w-full">
-                                                        <span className="text-xs md:text-sm font-semibold text-violet-700 truncate w-full px-1 text-center">
-                                                            {slot.session.member?.name || slot.session.bookings?.[0]?.member?.name || slot.session.title || "Réservé"}
-                                                        </span>
-                                                        {slot.session.type === 'GROUP' && (
-                                                            <Badge variant="secondary" className="text-[10px] md:text-xs bg-violet-200/50 text-violet-700 border-0 px-1.5 py-0">
-                                                                {slot.session.bookings?.length || 0}/{slot.session.capacity}
+                                                    {/* Room */}
+                                                    {roomName && (
+                                                        <div className="flex items-center gap-1.5 text-slate-600">
+                                                            <MapPin className="h-3.5 w-3.5" />
+                                                            <span className="text-xs">{roomName}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Group capacity badge */}
+                                                    {slot.session.type === 'GROUP' && (
+                                                        <div className="mt-2">
+                                                            <Badge variant="outline" className="text-[10px]">
+                                                                {slot.session.bookings?.length || 0}/{slot.session.capacity} inscrits
                                                             </Badge>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
                                         </div>
 
                                         {/* Subtle shine effect on hover */}
