@@ -428,13 +428,13 @@ export function DailySlotList({
                                             slot.status === 'FREE' && "bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 shadow-sm",
                                             slot.status === 'EXCEPTIONAL' && "bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 shadow-sm ring-2 ring-amber-200",
                                             slot.status === 'BLOCKED' && "bg-gradient-to-br from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300",
-                                            slot.status === 'BOOKED' && "bg-gradient-to-br from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 shadow-sm"
+                                            slot.status === 'BOOKED' && "bg-gradient-to-br from-[#fef9f0] to-[#fef5e7] hover:from-[#fef5e7] hover:to-[#fdebd0] shadow-sm"
                                         )}
                                     >
                                         {/* Time Header Bar */}
                                         <div className={cn(
                                             "w-full px-3 py-2 flex items-center justify-between",
-                                            slot.status === 'BOOKED' && "bg-violet-700",
+                                            slot.status === 'BOOKED' && "bg-[#c49829]",
                                             slot.status === 'FREE' && "bg-emerald-700",
                                             slot.status === 'EXCEPTIONAL' && "bg-amber-600",
                                             slot.status === 'BLOCKED' && "bg-slate-500"
@@ -480,7 +480,7 @@ export function DailySlotList({
                                                 <>
                                                     {/* Member info */}
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <div className="h-8 w-8 rounded-full bg-violet-700 flex items-center justify-center">
+                                                        <div className="h-8 w-8 rounded-full bg-[#c49829] flex items-center justify-center">
                                                             {slot.session.type === 'GROUP' ? (
                                                                 <Users className="h-4 w-4 text-white" />
                                                             ) : (
