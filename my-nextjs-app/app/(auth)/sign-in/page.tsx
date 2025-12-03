@@ -9,11 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Loader2 } from 'lucide-react';
 
 export default function SignInPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,10 +41,15 @@ export default function SignInPage() {
     };
 
     const handleGoogleSignIn = async () => {
-        await authClient.signIn.social({
-            provider: 'google',
-            callbackURL: '/dashboard',
-        });
+        setIsGoogleLoading(true);
+        try {
+            await authClient.signIn.social({
+                provider: 'google',
+                callbackURL: '/dashboard',
+            });
+        } catch (error) {
+            setIsGoogleLoading(false);
+        }
     };
 
     return (
@@ -60,8 +67,18 @@ export default function SignInPage() {
 
                     <CardContent className="p-0 space-y-3">
                         {/* Google Sign In - Primary Option */}
-                        <GoogleButton onClick={handleGoogleSignIn}>
-                            Sign in with Google
+                        <GoogleButton
+                            onClick={handleGoogleSignIn}
+                            disabled={isGoogleLoading || isLoading}
+                        >
+                            {isGoogleLoading ? (
+                                <>
+                                    <Loader2 className="animate-spin" />
+                                    Signing in with Google...
+                                </>
+                            ) : (
+                                'Sign in with Google'
+                            )}
                         </GoogleButton>
 
                         <div className="relative my-4 sm:my-6">
@@ -81,6 +98,7 @@ export default function SignInPage() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
+                                    disabled={isLoading || isGoogleLoading}
                                     required
                                 />
                             </div>
@@ -99,11 +117,19 @@ export default function SignInPage() {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    disabled={isLoading || isGoogleLoading}
                                     required
                                 />
                             </div>
-                            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                                {isLoading ? 'Signing in...' : 'Sign In'}
+                            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isGoogleLoading}>
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="animate-spin" />
+                                        Signing in...
+                                    </>
+                                ) : (
+                                    'Sign In'
+                                )}
                             </Button>
                         </form>
 
