@@ -124,6 +124,7 @@ export const updateUserSchema = z.object({
   sex: sexSchema,
   phone: phoneSchema,
   role: roleSchema.optional(),
+  defaultCoachId: z.string().uuid().optional().or(z.literal('')),
 });
 
 export const updateUserByIdSchema = z.object({
