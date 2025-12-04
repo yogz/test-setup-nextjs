@@ -28,6 +28,7 @@ export const users = pgTable('users', {
   phone: varchar('phone', { length: 20 }),
   role: varchar('role', { length: 20 }).default('member').notNull(),
   hasCompletedOnboarding: boolean('has_completed_onboarding').default(false).notNull(),
+  defaultCoachId: text('default_coach_id'), // Self-reference added later in relations
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -474,7 +475,7 @@ export type InsertRecurringBooking = z.infer<typeof insertRecurringBookingSchema
 // RELATIONS
 // ============================================================================
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   coachSessions: many(trainingSessions),
   bookings: many(bookings),
   memberships: many(memberships),
@@ -483,6 +484,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   blockedSlots: many(blockedSlots),
   availabilityAdditions: many(availabilityAdditions),
   recurringBookings: many(recurringBookings),
+  defaultCoach: one(users, {
+    fields: [users.defaultCoachId],
+    references: [users.id],
+  }),
 }));
 
 export const trainingSessionsRelations = relations(trainingSessions, ({ one, many }) => ({

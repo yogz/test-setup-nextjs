@@ -15,49 +15,84 @@ export default async function MemberBookPage() {
         redirect('/sign-in');
     }
 
-    // Fetch date range for availability lookup - only 3 weeks ahead for initial load
+    // Fetch date range for availability lookup - match client initial view (2 weeks)
     const now = new Date();
-    const threeWeeksAhead = new Date(now);
-    threeWeeksAhead.setDate(threeWeeksAhead.getDate() + 21);
+    const twoWeeksAhead = new Date(now);
+    twoWeeksAhead.setDate(twoWeeksAhead.getDate() + 14);
 
-    // Get all coaches with their availability
-    const coaches = await db.query.users.findMany({
-        where: or(eq(users.role, 'coach'), eq(users.role, 'owner')),
-        with: {
-            coachSettings: true,
-            weeklyAvailability: true,
-        },
-    });
-
-    // Get blocked slots for all coaches (only for the next 3 weeks)
-    const allBlockedSlots = await db.query.blockedSlots.findMany({
-        where: and(
-            gte(blockedSlots.startTime, now),
-            lte(blockedSlots.startTime, threeWeeksAhead)
-        ),
-    });
-
-    // Get existing sessions (only next 3 weeks, without heavy relations)
-    const existingSessions = await db.query.trainingSessions.findMany({
-        where: and(
-            gte(trainingSessions.startTime, now),
-            lte(trainingSessions.startTime, threeWeeksAhead),
-            ne(trainingSessions.status, 'cancelled')
-        ),
-        columns: {
-            id: true,
-            coachId: true,
-            startTime: true,
-            endTime: true,
-            type: true,
-            capacity: true,
-        },
-        with: {
-            bookings: {
-                columns: { id: true },
+    // Parallel data fetching for performance
+    const [coaches, allBlockedSlots, existingSessions, myBookings, currentUser] = await Promise.all([
+        // 1. Get all coaches with their availability
+        db.query.users.findMany({
+            where: or(eq(users.role, 'coach'), eq(users.role, 'owner')),
+            with: {
+                coachSettings: true,
+                weeklyAvailability: true,
             },
-        },
-    });
+        }),
+
+        // 2. Get blocked slots for all coaches
+        db.query.blockedSlots.findMany({
+            where: and(
+                gte(blockedSlots.startTime, now),
+                lte(blockedSlots.startTime, twoWeeksAhead)
+            ),
+        }),
+
+        // 3. Get existing sessions (without heavy relations)
+        db.query.trainingSessions.findMany({
+            where: and(
+                gte(trainingSessions.startTime, now),
+                lte(trainingSessions.startTime, twoWeeksAhead),
+                ne(trainingSessions.status, 'cancelled')
+            ),
+            columns: {
+                id: true,
+                coachId: true,
+                startTime: true,
+                endTime: true,
+                type: true,
+                capacity: true,
+            },
+            with: {
+                bookings: {
+                    columns: { id: true },
+                },
+            },
+        }),
+
+        // 4. Fetch member's recurring bookings
+        db.query.recurringBookings.findMany({
+            where: eq(recurringBookings.memberId, session.user.id),
+            with: {
+                coach: {
+                    columns: {
+                        id: true,
+                        name: true,
+                    },
+                },
+                sessions: {
+                    where: (sessions, { gte }) => gte(sessions.startTime, new Date()),
+                    orderBy: (sessions, { asc }) => [asc(sessions.startTime)],
+                    limit: 10,
+                    columns: {
+                        id: true,
+                        startTime: true,
+                        status: true,
+                    },
+                },
+            },
+            orderBy: (bookings, { desc }) => [desc(bookings.createdAt)],
+        }),
+
+        // 5. Fetch current user for default coach preference
+        db.query.users.findFirst({
+            where: eq(users.id, session.user.id),
+            columns: {
+                defaultCoachId: true,
+            },
+        })
+    ]);
 
     // Transform data for the client
     const coachesWithAvailability = coaches.map(coach => ({
@@ -92,35 +127,16 @@ export default async function MemberBookPage() {
             })),
     }));
 
-    // Fetch member's recurring bookings
-    const myBookings = await db.query.recurringBookings.findMany({
-        where: eq(recurringBookings.memberId, session.user.id),
-        with: {
-            coach: {
-                columns: {
-                    id: true,
-                    name: true,
-                },
-            },
-            sessions: {
-                where: (sessions, { gte }) => gte(sessions.startTime, new Date()),
-                orderBy: (sessions, { asc }) => [asc(sessions.startTime)],
-                limit: 10,
-                columns: {
-                    id: true,
-                    startTime: true,
-                    status: true,
-                },
-            },
-        },
-        orderBy: (bookings, { desc }) => [desc(bookings.createdAt)],
-    });
+
+
+
 
     return (
         <MemberBookingView
             coaches={coachesWithAvailability}
             memberId={session.user.id}
             recurringBookings={myBookings}
+            defaultCoachId={currentUser?.defaultCoachId}
         />
     );
 }

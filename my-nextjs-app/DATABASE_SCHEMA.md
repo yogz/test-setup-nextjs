@@ -66,6 +66,7 @@ Core user table for all application users (members, coaches, owners).
 | phone | varchar(20) | |
 | role | varchar(20) | Default 'member' (member/coach/owner) |
 | hasCompletedOnboarding | boolean | Default false |
+| defaultCoachId | text | FK -> users.id (Self-reference) |
 | createdAt | timestamp | |
 | updatedAt | timestamp | |
 

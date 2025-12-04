@@ -47,7 +47,8 @@ interface CoachData {
 interface MemberBookingViewProps {
     coaches: CoachData[];
     memberId: string;
-    recurringBookings?: any[]; // We can refine this type if needed, but for now any[] is fine to match the passed data structure or we can duplicate the type from the page
+    recurringBookings?: any[];
+    defaultCoachId?: string | null;
 }
 
 interface AvailableSlot {
@@ -58,10 +59,10 @@ interface AvailableSlot {
     isAvailable: boolean;
 }
 
-export function MemberBookingView({ coaches, memberId, recurringBookings }: MemberBookingViewProps) {
+export function MemberBookingView({ coaches, memberId, recurringBookings, defaultCoachId }: MemberBookingViewProps) {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'single' | 'recurring'>('single');
-    const [selectedCoachId, setSelectedCoachId] = useState<string>(coaches[0]?.id || '');
+    const [selectedCoachId, setSelectedCoachId] = useState<string>(defaultCoachId || coaches[0]?.id || '');
     const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isBooking, setIsBooking] = useState(false);

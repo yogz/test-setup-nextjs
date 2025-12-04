@@ -9,6 +9,7 @@ This document describes the complete architecture for managing coach availabilit
 - [User Flows](#user-flows)
 - [API Reference](#api-reference)
 - [Session Generation](#session-generation)
+- [Handling Availability Changes](#handling-availability-changes)
 - [Best Practices](#best-practices)
 
 ---
@@ -167,15 +168,10 @@ Sessions (Materialized)
 // 1. Coach defines weekly availability
 await updateWeeklyAvailabilityAction(1, [ // Monday
   { startTime: '09:00', endTime: '12:00', roomId: 'room-1' },
-  { startTime: '14:00', endTime: '17:00', roomId: 'room-1' },
 ]);
 
-// 2. Coach blocks vacation
-await blockSlotAction(
-  new Date('2025-01-15 00:00:00'),
-  new Date('2025-01-20 23:59:59'),
-  'Vacation'
-);
+// 2. System detects conflicts
+// If existing sessions don't fit, they appear in /coach/conflicts
 ```
 
 ### Flow 2: Member Books Recurring Session
@@ -225,6 +221,25 @@ const result = await bookAvailableSlotAction({
    - Link via recurringBookingId
 3. Mark past sessions as 'completed'
 ```
+
+---
+
+## Handling Availability Changes
+
+### The "Update Paradox"
+When a coach changes their weekly availability (e.g., removes "Monday 10am"), existing future sessions might become invalid.
+
+### Conflict Resolution Strategy
+Instead of automatically cancelling these sessions (which is aggressive), the system flags them as **Conflicts**.
+
+1. **Detection**:
+   - When availability changes, the system checks future sessions.
+   - Sessions that no longer fit the new weekly template AND are not covered by an `availability_addition` are flagged.
+
+2. **Resolution (Coach Action)**:
+   - Coaches visit `/coach/conflicts`.
+   - **Option A: Cancel**: The session is cancelled, member notified.
+   - **Option B: Keep (Exception)**: The system creates an `availability_addition` for this specific slot. This "whitelists" the session, resolving the conflict.
 
 ---
 
