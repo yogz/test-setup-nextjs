@@ -14,11 +14,12 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: {
-      user: users,
-      session: sessions,
-      account: accounts,
-      verification: verifications,
+      users,
+      sessions,
+      accounts,
+      verifications,
     },
+    usePlural: true,
   }),
   user: {
     additionalFields: {
