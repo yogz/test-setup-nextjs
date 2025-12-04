@@ -44,9 +44,20 @@ Sessions (Materialized)
 
 ## Database Schema
 
-### Coach Availability Tables
+### Coach Availability & Settings
 
-#### 1. `weekly_availability` (Recurring Template)
+#### 1. `coach_settings` (Preferences)
+```typescript
+{
+  id: string;
+  coachId: string;
+  defaultRoomId?: string;
+  defaultDuration: number; // e.g. 60 minutes
+}
+```
+**Usage**: Stores coach defaults to speed up availability creation.
+
+#### 2. `weekly_availability` (Recurring Template)
 ```typescript
 {
   id: string;
@@ -59,37 +70,21 @@ Sessions (Materialized)
   roomId?: string;
 }
 ```
-
 **Usage**: Coach's regular weekly schedule.
 
-**Example**:
-```sql
--- Coach available every Monday 9am-12pm
-INSERT INTO weekly_availability (coach_id, day_of_week, start_time, end_time, is_individual)
-VALUES ('coach-123', 1, '09:00', '12:00', true);
-```
-
-#### 2. `blocked_slots` (Negative Exceptions)
+#### 3. `blocked_slots` (Negative Exceptions)
 ```typescript
 {
   id: string;
   coachId: string;
   startTime: Date; // Full timestamp
   endTime: Date;
-  reason?: string; // "Vacation", "Conference"
+  reason?: string;
 }
 ```
-
 **Usage**: Block specific dates/times when coach is unavailable.
 
-**Example**:
-```sql
--- Block Jan 15, 2025 10am-12pm
-INSERT INTO blocked_slots (coach_id, start_time, end_time, reason)
-VALUES ('coach-123', '2025-01-15 10:00:00', '2025-01-15 12:00:00', 'Doctor appointment');
-```
-
-#### 3. `availability_additions` (Positive Exceptions)
+#### 4. `availability_additions` (Positive Exceptions)
 ```typescript
 {
   id: string;
@@ -97,24 +92,16 @@ VALUES ('coach-123', '2025-01-15 10:00:00', '2025-01-15 12:00:00', 'Doctor appoi
   startTime: Date;
   endTime: Date;
   roomId?: string;
-  reason?: string; // "Make-up session", "Special request"
+  reason?: string;
 }
 ```
-
 **Usage**: Add one-time slots outside regular schedule.
-
-**Example**:
-```sql
--- Add exceptional slot on Saturday
-INSERT INTO availability_additions (coach_id, start_time, end_time, reason)
-VALUES ('coach-123', '2025-01-18 10:00:00', '2025-01-18 11:00:00', 'Make-up session');
-```
 
 ---
 
 ### Member Booking Tables
 
-#### 4. `recurring_bookings` (Recurring Reservations)
+#### 5. `recurring_bookings` (Recurring Reservations)
 ```typescript
 {
   id: string;
@@ -125,41 +112,29 @@ VALUES ('coach-123', '2025-01-18 10:00:00', '2025-01-18 11:00:00', 'Make-up sess
   endTime: string;
   startDate: Date; // When recurring starts
   endDate?: Date; // null = indefinite
+  frequency: number; // 1=weekly, 2=bi-weekly
   status: 'ACTIVE' | 'CANCELLED';
 }
 ```
-
 **Usage**: Member's recurring reservation (e.g., "every Tuesday 10am").
 
-**Example**:
-```sql
--- Member books every Tuesday 10-11am, starting Jan 7
-INSERT INTO recurring_bookings (member_id, coach_id, day_of_week, start_time, end_time, start_date)
-VALUES ('member-456', 'coach-123', 2, '10:00', '11:00', '2025-01-07');
-```
-
-**Key Points**:
-- Sessions are generated automatically by cron job
-- Cancelling sets `status = 'CANCELLED'` and cancels future sessions
-- No end_date = booking continues indefinitely
-
-#### 5. `bookings` (One-Time Reservations)
+#### 6. `bookings` (One-Time Reservations)
 ```typescript
 {
   id: string;
   sessionId: string; // Links to specific session
   memberId: string;
   status: 'CONFIRMED' | 'CANCELLED_BY_MEMBER' | 'CANCELLED_BY_COACH' | 'NO_SHOW';
+  membershipId?: string;
 }
 ```
-
-**Usage**: Single session booking.
+**Usage**: Single session booking record.
 
 ---
 
 ### Session Table
 
-#### 6. `training_sessions` (Materialized Sessions)
+#### 7. `training_sessions` (Materialized Sessions)
 ```typescript
 {
   id: string;
@@ -180,14 +155,7 @@ VALUES ('member-456', 'coach-123', 2, '10:00', '11:00', '2025-01-07');
   notes?: string;
 }
 ```
-
 **Usage**: Each concrete session occurrence.
-
-**Key Points**:
-- Generated automatically from `recurring_bookings`
-- Created on-demand for `bookings`
-- Stores **origin reference** for traceability
-- Status updated automatically by cron job
 
 ---
 
@@ -208,9 +176,6 @@ await blockSlotAction(
   new Date('2025-01-20 23:59:59'),
   'Vacation'
 );
-
-// 3. Coach adds exceptional slot
-// (Needs new action - similar to blockSlotAction)
 ```
 
 ### Flow 2: Member Books Recurring Session
@@ -246,23 +211,9 @@ const result = await bookAvailableSlotAction({
 // ✅ Sets oneTimeBookingId reference
 ```
 
-### Flow 4: Member Cancels Recurring Booking
+### Flow 4: Automatic Session Generation (Cron Job)
 
-```typescript
-// Cancel all future sessions
-await cancelRecurringBookingAction({
-  recurringBookingId: 'booking-id',
-  futureOnly: true, // Don't cancel past/completed sessions
-});
-
-// ✅ Sets recurring_booking.status = 'CANCELLED'
-// ✅ Cancels all future sessions with status='scheduled'
-// ✅ Past sessions remain untouched
-```
-
-### Flow 5: Automatic Session Generation (Cron Job)
-
-**Runs daily at 2:00 AM (Vercel Cron)**
+**Runs daily at 2:00 AM**
 
 ```typescript
 // What happens:
@@ -275,207 +226,36 @@ await cancelRecurringBookingAction({
 3. Mark past sessions as 'completed'
 ```
 
-**Endpoint**: `/api/cron/generate-sessions`
-
----
-
-## API Reference
-
-### Recurring Booking Actions
-
-#### Create Recurring Booking
-```typescript
-createRecurringBookingAction(data: {
-  coachId: string;
-  dayOfWeek: number; // 0-6
-  startTime: string; // "HH:MM"
-  endTime: string; // "HH:MM"
-  startDate: string; // ISO date
-  endDate?: string; // Optional
-}): Promise<{ success: boolean; data?: RecurringBooking }>
-```
-
-#### Cancel Recurring Booking
-```typescript
-cancelRecurringBookingAction(data: {
-  recurringBookingId: string;
-  futureOnly?: boolean; // Default: true
-}): Promise<{ success: boolean }>
-```
-
-#### Get My Recurring Bookings
-```typescript
-getMyRecurringBookingsAction(): Promise<{
-  success: boolean;
-  data?: RecurringBooking[];
-}>
-```
-
-### Session Generation
-
-#### Manual Trigger (Admin Only)
-```bash
-POST /api/admin/generate-sessions
-Content-Type: application/json
-Authorization: Bearer <session-token>
-
-{
-  "weeksAhead": 6
-}
-```
-
-#### Cron Endpoint
-```bash
-GET /api/cron/generate-sessions
-Authorization: Bearer <CRON_SECRET>
-```
-
----
-
-## Session Generation
-
-### Generation Logic
-
-```typescript
-function generateSessionsForRecurringBooking(booking) {
-  const horizon = today + 6 weeks;
-  const sessions = [];
-
-  for (date = today; date <= horizon; date++) {
-    if (date.dayOfWeek === booking.dayOfWeek) {
-      // Check if session already exists
-      if (sessionExists(booking.id, date)) continue;
-
-      // Check if slot is blocked
-      if (isBlocked(booking.coachId, date)) continue;
-
-      // Check date range
-      if (date < booking.startDate || date > booking.endDate) continue;
-
-      // Create session
-      sessions.push({
-        recurringBookingId: booking.id,
-        coachId: booking.coachId,
-        memberId: booking.memberId,
-        startTime: combine(date, booking.startTime),
-        endTime: combine(date, booking.endTime),
-        status: 'scheduled',
-      });
-    }
-  }
-
-  db.insert(sessions);
-}
-```
-
-### Completion Marking
-
-```typescript
-function markPastSessionsCompleted() {
-  db.update(trainingSessions)
-    .set({ status: 'completed' })
-    .where(
-      status = 'scheduled' AND
-      endTime < NOW()
-    );
-}
-```
-
 ---
 
 ## Best Practices
 
 ### For Coaches
-
 1. **Set weekly availability early** - This allows members to book
 2. **Block known absences in advance** - Prevents double-booking
 3. **Use availability_additions sparingly** - For exceptional cases only
 
-### For Members
-
-1. **Recurring bookings for regular schedule** - Set and forget
-2. **One-time bookings for trials** - No commitment
-3. **Cancel with notice** - Respect coach's time
-
 ### For Developers
-
 1. **Always use transactions** when creating session + booking
 2. **Check blocked_slots** before session creation
 3. **Revalidate paths** after booking changes for cache updates
-4. **Monitor cron job logs** in Vercel dashboard
-
-### Performance Tips
-
-1. **Index frequently queried fields**:
-   ```sql
-   CREATE INDEX idx_sessions_coach_start ON training_sessions(coach_id, start_time);
-   CREATE INDEX idx_recurring_status ON recurring_bookings(status);
-   CREATE INDEX idx_blocked_coach_time ON blocked_slots(coach_id, start_time, end_time);
-   ```
-
-2. **Limit query ranges**:
-   ```typescript
-   // ✅ Good - bounded query
-   WHERE start_time >= NOW() AND start_time <= NOW() + INTERVAL '6 weeks'
-
-   // ❌ Bad - unbounded
-   WHERE start_time >= NOW()
-   ```
-
-3. **Batch inserts** when generating multiple sessions
-
----
-
-## Future Enhancements
-
-### Potential Features
-
-- [ ] **Pricing tiers** - Different prices per session
-- [ ] **Waitlists** - Auto-fill cancelled slots
-- [ ] **Member notifications** - Email/SMS reminders
-- [ ] **Recurring booking editing** - Change time without cancelling
-- [ ] **Coach availability forecasting** - Show utilization %
-- [ ] **Multi-week patterns** - "Every other week"
-- [ ] **Season passes** - Pre-paid bundles
-
-### Technical Improvements
-
-- [ ] **Event sourcing** - Full audit trail
-- [ ] **Optimistic locking** - Prevent double-booking races
-- [ ] **Background jobs** - Move to dedicated queue (BullMQ)
-- [ ] **Caching layer** - Redis for availability queries
-- [ ] **GraphQL subscriptions** - Real-time slot updates
+4. **Monitor cron job logs**
 
 ---
 
 ## Troubleshooting
 
 ### Sessions not generating?
-
 **Check**:
 1. `recurring_bookings.status = 'ACTIVE'`
-2. Cron job ran successfully (Vercel logs)
-3. Coach has `coachSettings.defaultRoomId` set
+2. Cron job ran successfully
+3. Coach has `coachSettings.defaultRoomId` set (if room required)
 4. No blocking conflicts in date range
 
 ### Member can't book?
-
 **Check**:
 1. Coach has `weekly_availability` for that day
 2. Time slot not in `blocked_slots`
 3. No overlapping `recurring_bookings`
-4. Session hasn't started yet (can't book past)
+4. Session hasn't started yet
 
-### Cron job failing?
-
-**Check**:
-1. `CRON_SECRET` environment variable set
-2. `vercel.json` deployed correctly
-3. Database connection healthy
-4. Check error logs in Vercel dashboard
-
----
-
-**Version**: 1.0
-**Last Updated**: January 2025
-**Maintainer**: [Your Team]

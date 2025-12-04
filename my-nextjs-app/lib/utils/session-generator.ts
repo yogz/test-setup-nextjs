@@ -7,7 +7,7 @@
  */
 
 import { db } from '@/lib/db';
-import { recurringBookings, trainingSessions, weeklyAvailability, blockedSlots } from '@/lib/db/schema';
+import { recurringBookings, trainingSessions, weeklyAvailability, blockedSlots, availabilityAdditions } from '@/lib/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 
 export type SessionGenerationResult = {
@@ -86,6 +86,24 @@ async function generateSessionsForRecurringBookingInternal(
     ),
   });
 
+  // Get weekly availability for this day
+  const availabilitySlots = await db.query.weeklyAvailability.findMany({
+    where: and(
+      eq(weeklyAvailability.coachId, coachId),
+      eq(weeklyAvailability.dayOfWeek, dayOfWeek)
+    ),
+  });
+
+  // Get availability additions for this coach (covering the whole range for simplicity, or fetch per day if optimization needed)
+  // For simplicity in this loop, we might want to fetch all relevant additions once
+  const additionsData = await db.query.availabilityAdditions.findMany({
+    where: and(
+      eq(availabilityAdditions.coachId, coachId),
+      gte(availabilityAdditions.startTime, startDate),
+      lte(availabilityAdditions.endTime, endDate)
+    ),
+  });
+
   const sessionsToCreate = [];
   const currentDate = new Date(Math.max(startDate.getTime(), new Date(bookingStartDate).getTime()));
 
@@ -128,7 +146,17 @@ async function generateSessionsForRecurringBookingInternal(
         block.startTime <= sessionStart && block.endTime > sessionStart
       );
 
-      if (!isBlocked) {
+      // Check if slot is allowed by weekly availability
+      const startStr = sessionStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const endStr = sessionEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+      const isAllowed = availabilitySlots.some(slot => {
+        return startStr >= slot.startTime && endStr <= slot.endTime;
+      }) || additionsData.some(addition => {
+        return addition.startTime <= sessionStart && addition.endTime >= sessionEnd;
+      });
+
+      if (!isBlocked && isAllowed) {
         sessionsToCreate.push({
           coachId,
           memberId,

@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { coachSettings, weeklyAvailability, blockedSlots, rooms } from '@/lib/db/schema';
+import { coachSettings, weeklyAvailability, blockedSlots, rooms, trainingSessions, availabilityAdditions } from '@/lib/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { headers } from 'next/headers';
@@ -101,6 +101,110 @@ export async function updateWeeklyAvailabilityAction(dayOfWeek: number, slots: {
 }
 
 // ============================================================================
+// CONFLICT MANAGEMENT
+// ============================================================================
+
+export async function getAvailabilityConflictsAction() {
+    const user = await getCoach();
+    const today = new Date();
+
+    // 1. Get all future scheduled sessions
+    const futureSessions = await db.query.trainingSessions.findMany({
+        where: and(
+            eq(trainingSessions.coachId, user.id),
+            eq(trainingSessions.status, 'scheduled'),
+            gte(trainingSessions.startTime, today)
+        ),
+        with: {
+            bookings: {
+                with: {
+                    member: true
+                }
+            }
+        }
+    });
+
+    if (futureSessions.length === 0) return [];
+
+    // 2. Get availability rules
+    const weeklySlots = await db.query.weeklyAvailability.findMany({
+        where: eq(weeklyAvailability.coachId, user.id),
+    });
+
+    const additions = await db.query.availabilityAdditions.findMany({
+        where: and(
+            eq(availabilityAdditions.coachId, user.id),
+            gte(availabilityAdditions.startTime, today)
+        ),
+    });
+
+    const blocks = await db.query.blockedSlots.findMany({
+        where: and(
+            eq(blockedSlots.coachId, user.id),
+            gte(blockedSlots.endTime, today)
+        ),
+    });
+
+    // 3. Find conflicts
+    const conflicts = futureSessions.filter(session => {
+        const sessionStart = session.startTime;
+        const sessionEnd = session.endTime;
+        const dayOfWeek = sessionStart.getDay();
+
+        // Check if blocked (Negative Exception)
+        const isBlocked = blocks.some(block =>
+            block.startTime <= sessionStart && block.endTime > sessionStart
+        );
+        if (isBlocked) return true; // Conflict!
+
+        // Check if explicitly allowed (Positive Exception)
+        const isExplicitlyAdded = additions.some(add =>
+            add.startTime <= sessionStart && add.endTime >= sessionEnd
+        );
+        if (isExplicitlyAdded) return false; // Valid!
+
+        // Check if in weekly template
+        const startStr = sessionStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const endStr = sessionEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+        const fitsTemplate = weeklySlots.some(slot =>
+            slot.dayOfWeek === dayOfWeek &&
+            startStr >= slot.startTime &&
+            endStr <= slot.endTime
+        );
+
+        return !fitsTemplate; // If not in template and not added -> Conflict!
+    });
+
+    return conflicts;
+}
+
+export async function resolveConflictKeepSessionAction(sessionId: string) {
+    const user = await getCoach();
+
+    const session = await db.query.trainingSessions.findFirst({
+        where: eq(trainingSessions.id, sessionId),
+    });
+
+    if (!session) throw new Error('Session not found');
+    if (session.coachId !== user.id) throw new Error('Unauthorized');
+
+    // Create an availability addition to "whitelist" this session
+    await db.insert(availabilityAdditions).values({
+        coachId: user.id,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        roomId: session.roomId,
+        isIndividual: session.type === 'ONE_TO_ONE',
+        isGroup: session.type === 'GROUP',
+        reason: 'Session maintained despite schedule change',
+    });
+
+    revalidatePath('/coach/conflicts');
+    revalidatePath('/coach/sessions');
+}
+
+// ============================================================================
 // BLOCKED SLOTS
 // ============================================================================
 
@@ -153,7 +257,7 @@ export async function getRoomsAction() {
 // SESSION MANAGEMENT
 // ============================================================================
 
-import { trainingSessions } from '@/lib/db/schema';
+
 
 export async function cancelSessionAction(sessionId: string) {
     const user = await getCoach();
