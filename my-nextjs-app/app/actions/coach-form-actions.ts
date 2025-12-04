@@ -131,14 +131,10 @@ export async function createSessionFromFormAction(formData: FormData) {
                     description,
                     type,
                     capacity,
-                    duration,
-                    weekdays,
                     isRecurring: true,
-                    recurrenceEndDate: endDate,
                     startTime,
                     endTime,
                     status: 'scheduled',
-                    frequency,
                     memberId: memberId || null, // Link member if provided
                 });
 
@@ -189,8 +185,6 @@ export async function createSessionFromFormAction(formData: FormData) {
             description,
             type,
             capacity,
-            duration,
-            weekdays,
             isRecurring: false,
             startTime,
             endTime,

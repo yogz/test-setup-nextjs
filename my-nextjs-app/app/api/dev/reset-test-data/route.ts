@@ -7,7 +7,6 @@ import {
   weeklyAvailability,
   blockedSlots,
   availabilityAdditions,
-  coachAvailabilities,
 } from '@/lib/db/schema';
 
 export async function POST() {
@@ -46,7 +45,6 @@ export async function POST() {
     await db.delete(weeklyAvailability);
     await db.delete(blockedSlots);
     await db.delete(availabilityAdditions);
-    await db.delete(coachAvailabilities);
 
     return NextResponse.json({
       success: true,

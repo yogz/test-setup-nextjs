@@ -6,7 +6,6 @@ import {
   availabilityAdditions,
   recurringBookings,
   bookings,
-  coachAvailabilities
 } from '@/lib/db/schema';
 
 /**
@@ -46,11 +45,6 @@ async function resetAll() {
     console.log('Deleting all availability additions...');
     const deletedAdditions = await db.delete(availabilityAdditions);
     console.log('✅ Availability additions deleted\n');
-
-    // 7. Delete all coach availabilities (old table)
-    console.log('Deleting all coach availabilities...');
-    const deletedCoachAvail = await db.delete(coachAvailabilities);
-    console.log('✅ Coach availabilities deleted\n');
 
     console.log('✨ All data has been successfully deleted!');
     console.log('\n📝 Summary:');

@@ -104,6 +104,15 @@ async function generateSessionsForRecurringBookingInternal(
     ),
   });
 
+  // Pre-fetch all existing sessions for this recurring booking (fixes N+1 query)
+  const existingSessions = await db.query.trainingSessions.findMany({
+    where: eq(trainingSessions.recurringBookingId, id),
+    columns: { startTime: true },
+  });
+  const existingSessionTimes = new Set(
+    existingSessions.map(s => s.startTime.getTime())
+  );
+
   const sessionsToCreate = [];
   const currentDate = new Date(Math.max(startDate.getTime(), new Date(bookingStartDate).getTime()));
 
@@ -128,15 +137,8 @@ async function generateSessionsForRecurringBookingInternal(
         continue;
       }
 
-      // Check if session already exists
-      const existingSession = await db.query.trainingSessions.findFirst({
-        where: and(
-          eq(trainingSessions.recurringBookingId, id),
-          eq(trainingSessions.startTime, sessionStart)
-        ),
-      });
-
-      if (existingSession) {
+      // Check if session already exists (O(1) lookup instead of database query)
+      if (existingSessionTimes.has(sessionStart.getTime())) {
         currentDate.setDate(currentDate.getDate() + 1);
         continue;
       }

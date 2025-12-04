@@ -7,7 +7,6 @@ import {
   integer,
   date,
   pgEnum,
-  jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
@@ -131,21 +130,7 @@ export const rooms = pgTable('rooms', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-// ============================================================================
-// COACH ↔ MEMBER LINK
-// ============================================================================
 
-export const coachMembers = pgTable('coach_members', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  coachId: text('coach_id')
-    .notNull()
-    .references(() => users.id),
-  memberId: text('member_id')
-    .notNull()
-    .references(() => users.id),
-  status: varchar('status', { length: 20 }).default('ACTIVE').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
 
 // ============================================================================
 // TRAINING SESSIONS (BOOKABLE SLOTS)
@@ -167,15 +152,7 @@ export const trainingSessions = pgTable('training_sessions', {
   capacity: integer('capacity'), // for GROUP; 1 for 1:1
   status: sessionStatusEnum('status').default('scheduled').notNull(),
   notes: text('notes'), // Coach confirmation notes
-  duration: integer('duration'), // duration in minutes
-  weekdays: jsonb('weekdays').$type<number[]>(), // array of weekday numbers (0=Sunday, 6=Saturday)
   isRecurring: boolean('is_recurring').default(false),
-  recurrenceEndDate: timestamp('recurrence_end_date'),
-  level: varchar('level', { length: 50 }), // ALL, BEGINNER, INTERMEDIATE, ADVANCED
-  minParticipants: integer('min_participants'),
-  frequency: integer('frequency').default(1), // 1=weekly, 2=bi-weekly, etc.
-  visibility: varchar('visibility', { length: 20 }).default('PUBLIC'), // PUBLIC, PRIVATE
-  material: text('material'),
 
   // NEW FIELDS for tracking origin
   recurringBookingId: text('recurring_booking_id').references(() => recurringBookings.id, { onDelete: 'cascade' }),
@@ -257,22 +234,7 @@ export const memberNotes = pgTable('member_notes', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-// ============================================================================
-// COACH AVAILABILITIES
-// ============================================================================
 
-export const coachAvailabilities = pgTable('coach_availabilities', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  coachId: text('coach_id')
-    .notNull()
-    .references(() => users.id),
-  locationId: text('location_id').references(() => locations.id),
-  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 6=Saturday
-  startTime: varchar('start_time', { length: 5 }).notNull(), // HH:MM
-  endTime: varchar('end_time', { length: 5 }).notNull(), // HH:MM
-  isRecurring: boolean('is_recurring').default(true).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
 
 // ============================================================================
 // COACH AVAILABILITY & SETTINGS
@@ -395,8 +357,7 @@ export const selectLocationSchema = createSelectSchema(locations);
 export const insertRoomSchema = createInsertSchema(rooms);
 export const selectRoomSchema = createSelectSchema(rooms);
 
-export const insertCoachMemberSchema = createInsertSchema(coachMembers);
-export const selectCoachMemberSchema = createSelectSchema(coachMembers);
+
 
 export const insertTrainingSessionSchema = createInsertSchema(trainingSessions);
 export const selectTrainingSessionSchema = createSelectSchema(trainingSessions);
@@ -413,8 +374,7 @@ export const selectPaymentSchema = createSelectSchema(payments);
 export const insertMemberNoteSchema = createInsertSchema(memberNotes);
 export const selectMemberNoteSchema = createSelectSchema(memberNotes);
 
-export const insertCoachAvailabilitySchema = createInsertSchema(coachAvailabilities);
-export const selectCoachAvailabilitySchema = createSelectSchema(coachAvailabilities);
+
 
 export const insertAvailabilityAdditionSchema = createInsertSchema(availabilityAdditions);
 export const selectAvailabilityAdditionSchema = createSelectSchema(availabilityAdditions);
@@ -444,8 +404,7 @@ export type InsertLocation = z.infer<typeof insertLocationSchema>;
 export type Room = z.infer<typeof selectRoomSchema>;
 export type InsertRoom = z.infer<typeof insertRoomSchema>;
 
-export type CoachMember = z.infer<typeof selectCoachMemberSchema>;
-export type InsertCoachMember = z.infer<typeof insertCoachMemberSchema>;
+
 
 export type TrainingSession = z.infer<typeof selectTrainingSessionSchema>;
 export type InsertTrainingSession = z.infer<typeof insertTrainingSessionSchema>;
@@ -461,9 +420,6 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
 export type MemberNote = z.infer<typeof selectMemberNoteSchema>;
 export type InsertMemberNote = z.infer<typeof insertMemberNoteSchema>;
-
-export type CoachAvailability = z.infer<typeof selectCoachAvailabilitySchema>;
-export type InsertCoachAvailability = z.infer<typeof insertCoachAvailabilitySchema>;
 
 export type AvailabilityAddition = z.infer<typeof selectAvailabilityAdditionSchema>;
 export type InsertAvailabilityAddition = z.infer<typeof insertAvailabilityAdditionSchema>;

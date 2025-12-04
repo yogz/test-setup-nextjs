@@ -27,7 +27,7 @@ import {
 } from '@/lib/validations/gym';
 import { validateData } from '@/lib/validations';
 import { db } from '@/lib/db';
-import { bookings, trainingSessions, memberNotes, coachAvailabilities, users, blockedSlots } from '@/lib/db/schema';
+import { bookings, trainingSessions, memberNotes, users, blockedSlots } from '@/lib/db/schema';
 import { eq, and, sql, asc, gte, lte } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import { revalidatePath } from 'next/cache';
@@ -585,77 +585,8 @@ export async function addSessionCommentAction(data: AddSessionCommentInput) {
 
 // ============================================================================
 // AVAILABILITY
+// Note: See coach-availability-actions.ts for availability management
 // ============================================================================
-
-export async function updateAvailabilityAction(data: UpdateAvailabilityInput) {
-    try {
-        const user = await requireUserWithPermission(PERMISSIONS.availability.updateOwn);
-
-        const validation = validateData(updateAvailabilitySchema, data);
-        if (!validation.success) {
-            return { success: false, error: 'Validation failed', validationErrors: validation.errors };
-        }
-
-        const { dayOfWeek, startTime, endTime, isRecurring } = validation.data;
-
-        await db.insert(coachAvailabilities).values({
-            coachId: user.id,
-            dayOfWeek,
-            startTime,
-            endTime,
-            isRecurring,
-        });
-
-        revalidatePath('/coach/availability');
-        return { success: true, message: 'Availability updated' };
-    } catch (error) {
-        return handleActionError(error);
-    }
-}
-
-export async function getCoachAvailabilitiesAction() {
-    try {
-        const user = await requireUserWithPermission(PERMISSIONS.availability.updateOwn);
-
-        const availabilities = await db.query.coachAvailabilities.findMany({
-            where: eq(coachAvailabilities.coachId, user.id),
-            orderBy: [asc(coachAvailabilities.dayOfWeek), asc(coachAvailabilities.startTime)],
-        });
-
-        return {
-            success: true,
-            data: availabilities,
-        };
-    } catch (error) {
-        return handleActionError(error);
-    }
-}
-
-export async function deleteAvailabilityAction(availabilityId: string) {
-    try {
-        const user = await requireUserWithPermission(PERMISSIONS.availability.updateOwn);
-
-        // Verify ownership
-        const availability = await db.query.coachAvailabilities.findFirst({
-            where: eq(coachAvailabilities.id, availabilityId),
-        });
-
-        if (!availability) {
-            return { success: false, error: 'Availability not found' };
-        }
-
-        if (availability.coachId !== user.id && user.role !== 'owner') {
-            throw new ForbiddenError();
-        }
-
-        await db.delete(coachAvailabilities).where(eq(coachAvailabilities.id, availabilityId));
-
-        revalidatePath('/coach/availability');
-        return { success: true, message: 'Availability deleted' };
-    } catch (error) {
-        return handleActionError(error);
-    }
-}
 
 // ============================================================================
 // STATS

@@ -8,7 +8,6 @@ import {
   weeklyAvailability,
   blockedSlots,
   availabilityAdditions,
-  coachAvailabilities,
 } from '@/lib/db/schema';
 
 /**
@@ -50,9 +49,6 @@ export async function resetTestData() {
 
     console.log('Deleting availability additions...');
     await db.delete(availabilityAdditions);
-
-    console.log('Deleting coach availabilities...');
-    await db.delete(coachAvailabilities);
 
     console.log('✅ All test data deleted successfully');
     return { success: true, message: 'All test data has been reset successfully' };

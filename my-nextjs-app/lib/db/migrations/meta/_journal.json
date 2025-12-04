@@ -64,6 +64,13 @@
       "when": 1764632983942,
       "tag": "0008_fancy_cable",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1764841697414,
+      "tag": "0009_wealthy_smasher",
+      "breakpoints": true
     }
   ]
 }
