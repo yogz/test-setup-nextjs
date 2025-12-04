@@ -198,51 +198,55 @@ export async function cancelRecurringBookingAction(data: CancelRecurringBookingI
       return { success: false, error: 'Unauthorized' };
     }
 
-    // 3. Mark recurring booking as cancelled
-    await db.update(recurringBookings)
-      .set({
-        status: 'CANCELLED',
-        cancelledAt: new Date(),
-      })
-      .where(eq(recurringBookings.id, recurringBookingId));
-
-    // 4. Cancel future sessions and their bookings
+    // 3. Cancel everything atomically in a transaction
     const now = new Date();
-    const sessionsToCancel = futureOnly
-      ? and(
-        eq(trainingSessions.recurringBookingId, recurringBookingId),
-        gte(trainingSessions.startTime, now),
-        eq(trainingSessions.status, 'scheduled')
-      )
-      : and(
-        eq(trainingSessions.recurringBookingId, recurringBookingId),
-        eq(trainingSessions.status, 'scheduled')
-      );
 
-    // Get session IDs before updating to also cancel their bookings
-    const sessionsBeingCancelled = await db.query.trainingSessions.findMany({
-      where: sessionsToCancel,
-      columns: { id: true },
-    });
-    const sessionIds = sessionsBeingCancelled.map(s => s.id);
-
-    // Cancel sessions
-    await db.update(trainingSessions)
-      .set({ status: 'cancelled' })
-      .where(sessionsToCancel);
-
-    // Also cancel bookings for these sessions (data integrity)
-    if (sessionIds.length > 0) {
-      await db.update(bookings)
+    await db.transaction(async (tx) => {
+      // Mark recurring booking as cancelled
+      await tx.update(recurringBookings)
         .set({
-          status: 'CANCELLED_BY_MEMBER',
-          cancelledAt: new Date()
+          status: 'CANCELLED',
+          cancelledAt: now,
         })
-        .where(and(
-          inArray(bookings.sessionId, sessionIds),
-          eq(bookings.status, 'CONFIRMED')
-        ));
-    }
+        .where(eq(recurringBookings.id, recurringBookingId));
+
+      // Build condition for sessions to cancel
+      const sessionsToCancel = futureOnly
+        ? and(
+          eq(trainingSessions.recurringBookingId, recurringBookingId),
+          gte(trainingSessions.startTime, now),
+          eq(trainingSessions.status, 'scheduled')
+        )
+        : and(
+          eq(trainingSessions.recurringBookingId, recurringBookingId),
+          eq(trainingSessions.status, 'scheduled')
+        );
+
+      // Get session IDs before updating to also cancel their bookings
+      const sessionsBeingCancelled = await tx.query.trainingSessions.findMany({
+        where: sessionsToCancel,
+        columns: { id: true },
+      });
+      const sessionIds = sessionsBeingCancelled.map(s => s.id);
+
+      // Cancel sessions
+      if (sessionIds.length > 0) {
+        await tx.update(trainingSessions)
+          .set({ status: 'cancelled' })
+          .where(inArray(trainingSessions.id, sessionIds));
+
+        // Also cancel bookings for these sessions
+        await tx.update(bookings)
+          .set({
+            status: 'CANCELLED_BY_MEMBER',
+            cancelledAt: now
+          })
+          .where(and(
+            inArray(bookings.sessionId, sessionIds),
+            eq(bookings.status, 'CONFIRMED')
+          ));
+      }
+    });
 
     revalidatePath('/bookings');
     revalidatePath('/member/recurring-bookings');
@@ -252,7 +256,6 @@ export async function cancelRecurringBookingAction(data: CancelRecurringBookingI
       message: 'Recurring booking cancelled successfully'
     };
   } catch (error) {
-    console.error('Cancel recurring booking error:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 }
@@ -351,6 +354,13 @@ export async function cancelRecurringSessionAction(data: { sessionId: string }) 
 // GENERATE SESSIONS FOR RECURRING BOOKING
 // ============================================================================
 
+// Type for coach with nested relations
+type CoachWithSettings = {
+  id: string;
+  coachSettings: Array<{ defaultRoomId: string | null }>;
+  blockedSlots: Array<{ startTime: Date; endTime: Date }>;
+};
+
 export async function generateSessionsForRecurringBooking(
   recurringBookingId: string,
   weeksAhead: number = 6
@@ -375,7 +385,13 @@ export async function generateSessionsForRecurringBooking(
 
     const { dayOfWeek, startTime, endTime, startDate, endDate } = booking;
 
-    // 2. Calculate date range
+    // 2. Safely extract coach data with type validation
+    const coach = booking.coach as CoachWithSettings | null;
+    if (!coach) {
+      return { success: false, error: 'Coach not found for this booking' };
+    }
+
+    // 3. Calculate date range
     const start = new Date(startDate);
     const horizon = new Date();
     horizon.setDate(horizon.getDate() + (weeksAhead * 7));
@@ -384,13 +400,14 @@ export async function generateSessionsForRecurringBooking(
       ? new Date(Math.min(horizon.getTime(), new Date(endDate).getTime()))
       : horizon;
 
-    // 3. Get coach's default room
-    const roomId = (booking.coach as any).coachSettings?.[0]?.defaultRoomId;
+    // 4. Get coach's default room with validation
+    const coachSettings = coach.coachSettings?.[0];
+    const roomId = coachSettings?.defaultRoomId;
     if (!roomId) {
       return { success: false, error: 'Coach has no default room configured' };
     }
 
-    // 4. Pre-fetch all existing sessions for this recurring booking (fixes N+1 query)
+    // 5. Pre-fetch all existing sessions for this recurring booking (fixes N+1 query)
     const existingSessions = await db.query.trainingSessions.findMany({
       where: eq(trainingSessions.recurringBookingId, recurringBookingId),
     });
@@ -399,7 +416,7 @@ export async function generateSessionsForRecurringBooking(
     );
 
     // Pre-process blocked slots for efficient lookup
-    const blockedSlotsList = (booking.coach as any).blockedSlots || [];
+    const blockedSlotsList = coach.blockedSlots ?? [];
 
     // 5. Generate sessions for each occurrence
     const sessionsToCreate = [];
@@ -437,7 +454,7 @@ export async function generateSessionsForRecurringBooking(
         }
 
         // Check if slot is blocked
-        const isBlocked = blockedSlotsList.some((block: any) =>
+        const isBlocked = blockedSlotsList.some((block) =>
           block.startTime <= sessionStart && block.endTime > sessionStart
         );
 

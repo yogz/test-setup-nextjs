@@ -71,6 +71,13 @@
       "when": 1764841697414,
       "tag": "0009_wealthy_smasher",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1764845624548,
+      "tag": "0010_short_beyonder",
+      "breakpoints": true
     }
   ]
 }

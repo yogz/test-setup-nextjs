@@ -1,6 +1,6 @@
 'use server';
 
-import { updateAvailabilityAction, createTrainingSessionAction } from './gym-actions';
+import { updateWeeklyAvailabilityAction } from './coach-availability-actions';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { trainingSessions } from '@/lib/db/schema';
@@ -11,14 +11,8 @@ export async function createAvailabilityFromForm(formData: FormData) {
     const dayOfWeek = parseInt(formData.get('dayOfWeek') as string);
     const startTime = formData.get('startTime') as string;
     const endTime = formData.get('endTime') as string;
-    const isRecurring = formData.get('isRecurring') === 'true';
 
-    await updateAvailabilityAction({
-        dayOfWeek,
-        startTime,
-        endTime,
-        isRecurring,
-    });
+    await updateWeeklyAvailabilityAction(dayOfWeek, [{ startTime, endTime }]);
 
     revalidatePath('/coach/availability');
 }

@@ -7,6 +7,8 @@ import {
   integer,
   date,
   pgEnum,
+  unique,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
@@ -154,13 +156,19 @@ export const trainingSessions = pgTable('training_sessions', {
   notes: text('notes'), // Coach confirmation notes
   isRecurring: boolean('is_recurring').default(false),
 
-  // NEW FIELDS for tracking origin
+  // Fields for tracking origin
   recurringBookingId: text('recurring_booking_id').references(() => recurringBookings.id, { onDelete: 'cascade' }),
-  oneTimeBookingId: text('one_time_booking_id'), // Reference to bookings - no FK to avoid circular reference
-  memberId: text('member_id').references(() => users.id), // Direct member reference for quick queries
+  memberId: text('member_id').references(() => users.id, { onDelete: 'set null' }), // Direct member reference for quick queries
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  // Prevent duplicate sessions from recurring bookings at the same time
+  unique('sessions_recurring_starttime_unique').on(table.recurringBookingId, table.startTime),
+  // Index for fast coach schedule lookups
+  index('sessions_coach_start_idx').on(table.coachId, table.startTime),
+  // Index for member session lookups
+  index('sessions_member_idx').on(table.memberId),
+]);
 
 // ============================================================================
 // MEMBERSHIPS / PACKS
@@ -197,7 +205,12 @@ export const bookings = pgTable('bookings', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   cancelledAt: timestamp('cancelled_at'),
   membershipId: text('membership_id').references(() => memberships.id),
-});
+}, (table) => [
+  // Prevent duplicate bookings: same member cannot book same session twice
+  unique('bookings_session_member_unique').on(table.sessionId, table.memberId),
+  // Index for fast lookups by member
+  index('bookings_member_idx').on(table.memberId),
+]);
 
 // ============================================================================
 // PAYMENTS (LOG, EXTERNAL PROVIDER)
@@ -462,10 +475,6 @@ export const trainingSessionsRelations = relations(trainingSessions, ({ one, man
   recurringBooking: one(recurringBookings, {
     fields: [trainingSessions.recurringBookingId],
     references: [recurringBookings.id],
-  }),
-  oneTimeBooking: one(bookings, {
-    fields: [trainingSessions.oneTimeBookingId],
-    references: [bookings.id],
   }),
   bookings: many(bookings),
 }));

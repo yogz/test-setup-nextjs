@@ -206,31 +206,41 @@ export async function createRecurringBookingAction(data: CreateRecurringBookingI
             return { success: false, error: 'No future occurrences found' };
         }
 
-        // 3. Book each session
-        const results = [];
+        // 3. Book all sessions atomically in a transaction
+        type BookingResult = { sessionId: string; status: 'booked' | 'full' | 'already_booked' };
+        const results: BookingResult[] = [];
+        const bookingsToCreate: { sessionId: string; memberId: string; status: 'CONFIRMED' }[] = [];
+
+        // First pass: determine which sessions can be booked
         for (const futureSession of matchingSessions) {
             // Check capacity
-            const bookingCount = futureSession.bookings.filter((b: any) => b.status === 'CONFIRMED').length;
+            const bookingCount = futureSession.bookings.filter((b) => b.status === 'CONFIRMED').length;
             if (futureSession.capacity && bookingCount >= futureSession.capacity) {
                 results.push({ sessionId: futureSession.id, status: 'full' });
                 continue;
             }
 
             // Check if already booked
-            const existingBooking = futureSession.bookings.find((b: any) => b.memberId === targetMemberId && b.status === 'CONFIRMED');
+            const existingBooking = futureSession.bookings.find((b) => b.memberId === targetMemberId && b.status === 'CONFIRMED');
             if (existingBooking) {
                 results.push({ sessionId: futureSession.id, status: 'already_booked' });
                 continue;
             }
 
-            // Create booking
-            await db.insert(bookings).values({
+            // Queue for batch insert
+            bookingsToCreate.push({
                 sessionId: futureSession.id,
                 memberId: targetMemberId,
                 status: 'CONFIRMED',
             });
-
             results.push({ sessionId: futureSession.id, status: 'booked' });
+        }
+
+        // Second pass: batch insert all bookings in a transaction
+        if (bookingsToCreate.length > 0) {
+            await db.transaction(async (tx) => {
+                await tx.insert(bookings).values(bookingsToCreate);
+            });
         }
 
         revalidatePath('/bookings');
@@ -325,7 +335,6 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
         });
 
         if (!isInAvailability) {
-            console.log('Slot not in availability:', slotStartTime, dayOfWeek);
             return { success: false, error: 'This time slot is not available for booking' };
         }
 
@@ -339,25 +348,26 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
         });
 
         if (blocked) {
-            console.log('Slot blocked');
             return { success: false, error: 'This slot is blocked' };
         }
 
-        // 4. Check if session already exists at this time
-        const existingSession = await db.query.trainingSessions.findFirst({
-            where: and(
-                eq(trainingSessions.coachId, coachId),
-                eq(trainingSessions.startTime, start)
-            ),
-        });
+        // 4. Create session and booking atomically with existence check INSIDE transaction
+        const result = await db.transaction(async (tx) => {
+            // Check for overlapping sessions (not just exact time match)
+            const overlappingSession = await tx.query.trainingSessions.findFirst({
+                where: and(
+                    eq(trainingSessions.coachId, coachId),
+                    eq(trainingSessions.status, 'scheduled'),
+                    // Session overlaps if: existing.start < new.end AND existing.end > new.start
+                    lte(trainingSessions.startTime, end),
+                    gte(trainingSessions.endTime, start)
+                ),
+            });
 
-        if (existingSession) {
-            console.log('Session already exists');
-            return { success: false, error: 'A session already exists at this time' };
-        }
+            if (overlappingSession) {
+                return { success: false, error: 'A session already exists at this time' };
+            }
 
-        // 5. Create session and booking atomically
-        await db.transaction(async (tx) => {
             // Create the training session
             const [newSession] = await tx
                 .insert(trainingSessions)
@@ -372,6 +382,7 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
                     type: 'ONE_TO_ONE',
                     status: 'scheduled',
                     isRecurring: false,
+                    memberId: targetMemberId,
                 })
                 .returning();
 
@@ -381,12 +392,15 @@ export async function bookAvailableSlotAction(data: BookAvailableSlotInput) {
                 memberId: targetMemberId,
                 status: 'CONFIRMED',
             });
+
+            return { success: true, message: 'Session booked successfully' };
         });
 
-        revalidatePath('/bookings');
-        return { success: true, message: 'Session booked successfully' };
+        if (result.success) {
+            revalidatePath('/bookings');
+        }
+        return result;
     } catch (error) {
-        console.error('Booking error:', error);
         return handleActionError(error);
     }
 }
